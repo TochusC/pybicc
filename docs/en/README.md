@@ -28,6 +28,8 @@ Graphical interface implemented using [PyQt6](https://riverbankcomputing.com/sof
 
 </div>
 
+---
+
 Currently, only supports mathematical expressions with operators like + - * / ( ) < > == != <= >=.
 
 Does not support floating-point numbers / negative numbers.
