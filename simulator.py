@@ -245,6 +245,8 @@ def run_command(command):
     # 加法指令add 通用形式：add destination, source
     if segment[0] == "add":
         if len(segment) == 3:
+            segment[1] = segment[1][:-1]
+
             addressing_mode, destination = addressing(segment[1])
 
             if addressing_mode != AddressingMode.REGISTER:
@@ -252,31 +254,19 @@ def run_command(command):
 
             addressing_mode, source = addressing(segment[2])
 
-            if addressing_mode == AddressingMode.REGISTER:
-                register_index = register_index_table[destination]
-                register[register_index] += source
+            source_value = getValueByAddressing(addressing_mode, source)
 
-            elif addressing_mode == AddressingMode.MEMORY:
-                register_index = register_index_table[destination[1:-1]]
-
-                memory_address = register[register_index]
-                stack_index = memoryAddressing(memory_address)
-
-                register[register_index] += stack[stack_index]
-
-            elif addressing_mode == AddressingMode.IMMEDIATE:
-                register_index = register_index_table[destination]
-                register[register_index] += source
-
-            else:
-                error("add指令的源操作数错误, %s", source)
+            register_index = register_index_table[destination]
+            register[register_index] += source_value
 
         else:
             error("add指令的参数量错误，共有%d个参数", len(segment))
 
-        # 减法指令sub 通用形式：sub destination, source
+    # 减法指令sub 通用形式：sub destination, source
     if segment[0] == "sub":
         if len(segment) == 3:
+            segment[1] = segment[1][:-1]
+
             addressing_mode, destination = addressing(segment[1])
 
             if addressing_mode != AddressingMode.REGISTER:
@@ -284,22 +274,10 @@ def run_command(command):
 
             addressing_mode, source = addressing(segment[2])
 
-            if addressing_mode == AddressingMode.REGISTER:
-                register_index = register_index_table[destination]
-                register[register_index] -= source
+            source_value = getValueByAddressing(addressing_mode, source)
 
-            elif addressing_mode == AddressingMode.MEMORY:
-                register_index = register_index_table[destination[1:-1]]
-                memory_address = register[register_index]
-                stack_index = memoryAddressing(memory_address)
-                register[register_index] += register_index
-
-            elif addressing_mode == AddressingMode.IMMEDIATE:
-                register_index = register_index_table[destination]
-                register[register_index] -= source
-
-            else:
-                error("sub指令的源操作数错误, %s", source)
+            register_index = register_index_table[destination]
+            register[register_index] -= source_value
 
         else:
             error("sub指令的参数量错误，共有%d个参数", len(segment))
@@ -307,6 +285,9 @@ def run_command(command):
     # 整数乘法指令imul 通用形式：mul destination, source
     if segment[0] == "mul":
         if len(segment) == 3:
+
+            segment[1] = segment[1][:-1]
+
             addressing_mode, destination = addressing(segment[1])
 
             if addressing_mode != AddressingMode.REGISTER:
@@ -368,6 +349,9 @@ def run_command(command):
     # 比较指令cmp 通用形式：cmp operand1 operand2
     if segment[0] == "cmp":
         if len(segment) == 3:
+
+            segment[1] = segment[1][:-1]
+
             operand1_addressing_mode, operand1 = addressing(segment[1])
             operand2_addressing_mode, operand2 = addressing(segment[2])
             operand1_value = getValueByAddressing(operand1_addressing_mode, operand1)
@@ -475,6 +459,9 @@ def run_command(command):
     # movzb指令，用于将一个字节（8位）的无符号整数值零扩展并移动到指定寄存器。movzb 的含义是 "move zero-extend byte"。
     if segment[0] == "movb":
         if len(segment) == 3:
+
+            segment[1] = segment[1][:-1]
+
             addressing_mode, destination = addressing(segment[1])
 
             if addressing_mode == AddressingMode.REGISTER:

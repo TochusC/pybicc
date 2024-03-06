@@ -27,20 +27,9 @@ import simulator
 import tokenize
 import parse
 
-# 目前只支持包含+ - * / ( ) < > == != <= >=等运算符的数学表达式
-# 不支持浮点数/负数
-# 例如：
-# 7 + 9 * 2
-# 3 + (4 / 2)
-# 1 != 2
-# 5 == 3 + 1 + 4
-# 8 <= 9 * (3 + 1)
-# 解释器的任务：对于布尔表达式，返回1表示true，返回0表示false，数学表达式返回计算结果。
-# 编译器的任务：将表达式编译成Intel 80x86汇编代码。
-
 # 需要编译的代码
 codeToCompile = """
-    13 + 5
+    6 + 7
 """
 
 DEBUG = True
@@ -83,10 +72,7 @@ if __name__ == '__main__':
         print("======编译结果======")
         print(code)
 
-    result = coderun.run(parse.node)
-    # 解释运行，输出运算结果
-    if DEBUG:
-        print("======运行结果======")
-        print(result)
-
+    # 解释执行汇编代码
+    print("======执行结果======")
+    simulator.run(code)
 
