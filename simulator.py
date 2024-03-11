@@ -106,23 +106,28 @@ def error(fmt, *args):
     print(fmt % args)
 
 
-# 寻址模式
+# 确定寻址模式
 def addressing(source):
+    """
+    根据源操作数（source）的形式，确认源操作数的寻址模式
+    :param source: 需要确定寻址模式的源操作数
+    :return AddressingMode:  枚举类型的寻址模式
+    """
     # 寄存器寻址模式
     if source in register_index_table:
-        return AddressingMode.REGISTER, source
+        return AddressingMode.REGISTER
 
     # 内存寻址模式
     elif "[" in source and "]" in source:
-        return AddressingMode.MEMORY, source
+        return AddressingMode.MEMORY
 
     # 立即数寻址模式
     elif source.isdigit():
-        return AddressingMode.IMMEDIATE, int(source)
+        return AddressingMode.IMMEDIATE
 
     else:
         error("无法识别的源操作数: %s", source)
-        return None, None
+        return None
 
 
 # TODO
@@ -132,9 +137,16 @@ def memoryAddressing(memory_address):
 
 
 # 根据寻址模式获取操作数的值
+
 def getValueByAddressing(AddressingMode, source):
+    """
+    根据寻址模式获取操作数的值
+    :param AddressingMode: 寻址模式
+    :param source: 源操作数
+    :return value: 源操作数的值
+    """
     if AddressingMode == AddressingMode.IMMEDIATE:
-        return source
+        return int(source)
 
     elif AddressingMode == AddressingMode.REGISTER:
         register_index = register_index_table[source]
@@ -155,6 +167,11 @@ RUNNING_COMMAND_LINE_INDEX = 0
 
 
 def run(code):
+    """
+    解释执行汇编代码
+    :param code: 要执行的汇编代码
+    :return: Nothing?
+    """
     global RUNNING_COMMAND_LINE_INDEX
 
     assembler_commands = code.split("\n")  # 将汇编代码按行分割
@@ -170,13 +187,11 @@ def run(code):
 
         if command_line == "":
             continue
-        # 如果以两个空格开头，则是直接运行的命令
-        if command_line[0:2] == "  ":
-            command = command_line[2:]
-            run_command(command)
+
+        command_line = command_line.strip()  # 去掉行首行尾的空格
 
         # 检查是否是函数入口
-        elif command_line[-1] == ":":
+        if command_line[-1] == ":":
             function_name = command_line[:-1]
 
             # 记录函数入口的行号
@@ -192,11 +207,8 @@ def run(code):
                     RUNNING_COMMAND_LINE_INDEX += 1
 
                 command_line_index = RUNNING_COMMAND_LINE_INDEX
-
         else:
-            # TODO 不太清楚会不会有这种情况
-            if command_line != "":
-                error("无法识别的汇编代码: %s", command_line)
+            run_command(command_line)
 
 
 def run_command(command):
@@ -206,20 +218,13 @@ def run_command(command):
     # push指令:将数据压入栈中 通用形式：push source
     if segment[0] == "push":
         if len(segment) == 2:
-            addressing_mode, source = addressing(segment[1])
+            source = segment[1]
 
-            if addressing_mode == AddressingMode.IMMEDIATE:  # 立即数寻址模式
-                stack.append(source)
+            addressing_mode = addressing(source)
 
-            elif addressing_mode == AddressingMode.REGISTER:  # 寄存器寻址模式
-                register_index = register_index_table[source]
-                stack.append(register[register_index])
+            source_value = getValueByAddressing(addressing_mode, source)
 
-            elif addressing_mode == AddressingMode.MEMORY:  # 内存寻址模式
-                register_index = register_index_table[source[1:-1]]
-                memory_address = register[register_index]
-                stack_index = memoryAddressing(memory_address)
-                stack.append(stack[stack_index])
+            stack.append(source_value)
 
         else:
             error("push的参数量错误，共有%d个参数", len(segment))
@@ -227,7 +232,8 @@ def run_command(command):
     # pop指令:将数据从栈中弹出 通用形式：pop destination
     if segment[0] == "pop":
         if len(segment) == 2:
-            addressing_mode, destination = addressing(segment[1])
+            destination = segment[1]
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
@@ -245,14 +251,15 @@ def run_command(command):
     # 加法指令add 通用形式：add destination, source
     if segment[0] == "add":
         if len(segment) == 3:
-            segment[1] = segment[1][:-1]
+            destination = segment[1][:-1]
 
-            addressing_mode, destination = addressing(segment[1])
+            addressing_mode = addressing(destination)
 
             if addressing_mode != AddressingMode.REGISTER:
                 error("add指令的目的操作数错误, %s", destination)
 
-            addressing_mode, source = addressing(segment[2])
+            source = segment[2]
+            addressing_mode = addressing(source)
 
             source_value = getValueByAddressing(addressing_mode, source)
 
@@ -265,14 +272,15 @@ def run_command(command):
     # 减法指令sub 通用形式：sub destination, source
     if segment[0] == "sub":
         if len(segment) == 3:
-            segment[1] = segment[1][:-1]
+            destination = segment[1][:-1]
 
-            addressing_mode, destination = addressing(segment[1])
+            addressing_mode = addressing(destination)
 
             if addressing_mode != AddressingMode.REGISTER:
                 error("sub指令的目的操作数错误, %s", destination)
 
-            addressing_mode, source = addressing(segment[2])
+            source = segment[2]
+            addressing_mode, source = addressing(source)
 
             source_value = getValueByAddressing(addressing_mode, source)
 
@@ -283,43 +291,32 @@ def run_command(command):
             error("sub指令的参数量错误，共有%d个参数", len(segment))
 
     # 整数乘法指令imul 通用形式：mul destination, source
-    if segment[0] == "mul":
+    if segment[0] == "imul":
         if len(segment) == 3:
+            destination = segment[1][:-1]
 
-            segment[1] = segment[1][:-1]
-
-            addressing_mode, destination = addressing(segment[1])
+            addressing_mode = addressing(destination)
 
             if addressing_mode != AddressingMode.REGISTER:
-                error("mul指令的目的操作数错误, %s", destination)
+                error("imul指令的目的操作数错误, %s", destination)
 
-            addressing_mode, source = addressing(segment[2])
+            source = segment[2]
+            addressing_mode = addressing(source)
 
-            if addressing_mode == AddressingMode.REGISTER:
-                register_index = register_index_table[destination]
-                register[register_index] *= source
+            source_value = getValueByAddressing(addressing_mode, source)
 
-            elif addressing_mode == AddressingMode.MEMORY:
-                register_index = register_index_table[destination[1:-1]]
-                memory_address = register[register_index]
-                stack_index = memoryAddressing(memory_address)
-                register[register_index] += stack[stack_index]
-
-            elif addressing_mode == AddressingMode.IMMEDIATE:
-                register_index = register_index_table[destination]
-                register[register_index] *= source
-
-            else:
-                error("mul指令的源操作数错误, %s", source)
+            register_index = register_index_table[destination]
+            register[register_index] *= source_value
 
         else:
-            error("mul指令的参数量错误，共有%d个参数", len(segment))
+            error("imul指令的参数量错误，共有%d个参数", len(segment))
 
-    # 整数除法指令idiv 通用形式：div destination, source
+    # 整数除法指令idiv 通用形式：div operand
     # idiv指令实现的有些粗糙，可能出现问题
     if segment[0] == "idiv":
         if len(segment) == 2:
-            addressing_mode, operand = addressing(segment[1])
+            operand = segment[1]
+            addressing_mode = addressing(operand)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[operand]
@@ -331,7 +328,7 @@ def run_command(command):
                 register[rdx_index] = register[rax_index] % register[register_index]
 
             else:
-                error("idiv指令的源操作数错误, %s", source)
+                error("idiv指令的源操作数错误, %s", operand)
 
         else:
             error("idiv指令的参数量错误，共有%d个参数", len(segment))
@@ -350,10 +347,12 @@ def run_command(command):
     if segment[0] == "cmp":
         if len(segment) == 3:
 
-            segment[1] = segment[1][:-1]
+            operand1 = segment[1][:-1]
+            operand2 = segment[2]
 
-            operand1_addressing_mode, operand1 = addressing(segment[1])
-            operand2_addressing_mode, operand2 = addressing(segment[2])
+            operand1_addressing_mode = addressing(operand1)
+            operand2_addressing_mode = addressing(operand2)
+
             operand1_value = getValueByAddressing(operand1_addressing_mode, operand1)
             operand2_value = getValueByAddressing(operand2_addressing_mode, operand2)
 
@@ -386,7 +385,8 @@ def run_command(command):
     # 设置标志位指令sete 通用形式：sete destination
     if segment[0] == "sete":
         if len(segment) == 2:
-            addressing_mode, destination = addressing(segment[1])
+            destination = segment[1]
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
@@ -404,7 +404,8 @@ def run_command(command):
     # 设置标志位指令setne 通用形式：setne destination
     if segment[0] == "setne":
         if len(segment) == 2:
-            addressing_mode, destination = addressing(segment[1])
+            destination = segment[1]
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
@@ -422,7 +423,8 @@ def run_command(command):
     # 设置标志位指令setl 通用形式：setl destination
     if segment[0] == "setl":
         if len(segment) == 2:
-            addressing_mode, destination = addressing(segment[1])
+            destination = segment[1]
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
@@ -440,7 +442,8 @@ def run_command(command):
     # 设置标志位指令setle 通用形式：setle destination
     if segment[0] == "setle":
         if len(segment) == 2:
-            addressing_mode, destination = addressing(segment[1])
+            destination = segment[1]
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
@@ -460,14 +463,15 @@ def run_command(command):
     if segment[0] == "movb":
         if len(segment) == 3:
 
-            segment[1] = segment[1][:-1]
+            destination = segment[1][:-1]
 
-            addressing_mode, destination = addressing(segment[1])
+            addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
 
-                addressing_mode, source = addressing(segment[2])
+                source = segment[2]
+                addressing_mode, source = addressing(source)
                 source_value = getValueByAddressing(addressing_mode, source)
                 # TODO 0扩展 依照现在版本的模拟程度， 0扩展不需要实现
 
@@ -481,4 +485,8 @@ def run_command(command):
 
     # ret指令，用于从函数中返回 通用形式：ret
     elif segment[0] == "ret":
-        print(register[register_index_table["rax"]])
+        print("return value:", register[register_index_table["rax"]])
+
+    # print指令，调试用。
+    elif segment[0] == "print":
+        print("print rax value:", register[register_index_table["rax"]])

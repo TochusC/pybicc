@@ -59,9 +59,12 @@ def codegen(node):
     code += "  .global main\n"
     code += "main:\n"
 
-    gen(node)
+    while node is not None:
+        gen(node)
+        code += "  pop rax\n"
+        code += "  print\n"     # 调试用
+        node = node.next
 
-    code += "  pop rax\n"
     code += "  ret\n"
 
     return code

@@ -21,7 +21,6 @@
         - 8 <= 9 * (3 +1)
 """
 
-
 import codegen
 import simulator
 import tokenize
@@ -29,10 +28,12 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    6 + 7
+    (16 + 3) * (2 / 2);
+    3 + 4;
 """
 
 DEBUG = True
+
 
 # 前序遍历输出node，用于调试
 def print_node(node):
@@ -46,6 +47,7 @@ def print_node(node):
     if node.rhs is not None:
         print_node(node.rhs)
 
+
 if __name__ == '__main__':
     # 词法分析
     tokenize.token = tokenize.tokenize(codeToCompile)
@@ -58,7 +60,7 @@ if __name__ == '__main__':
             print(token.kind, token.str)
             token = token.next
 
-    parse.node = parse.expr()
+    parse.node = parse.program()
 
     if DEBUG:
         # 输出node，用于调试
@@ -75,4 +77,3 @@ if __name__ == '__main__':
     # 解释执行汇编代码
     print("======执行结果======")
     simulator.run(code)
-

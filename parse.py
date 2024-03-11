@@ -1,6 +1,6 @@
 from enum import Enum
 
-from tokenize import consume, expect, expect_number
+from tokenize import consume, expect, expect_number, at_eof
 
 node = None
 
@@ -14,19 +14,23 @@ class NodeKind(Enum):
     ND_LT = 7
     ND_LE = 8
     ND_NUM = 9
+    ND_ROOT = 10
 
 
 class Node:
     kind = NodeKind
+    next = None
     lhs = None
     rhs = None
     val = 0
 
-    def __init__(self, kind, val=0, lhs=None, rhs=None):
+    def __init__(self, kind, val=0, lhs=None, rhs=None, next=None):
         self.kind = kind
         self.lhs = lhs
         self.rhs = rhs
         self.val = val
+        self.next = next
+
 
 
 def new_node(kind):
@@ -39,6 +43,23 @@ def new_binary(kind, lhs, rhs):
 
 def new_num(val):
     return Node(NodeKind.ND_NUM, val)
+
+# program = stmt*
+def program():
+    head = Node(NodeKind.ND_ROOT)
+    cur = head
+    while True:
+        if at_eof():
+            break
+        cur.next = stmt()
+        cur = cur.next
+    return head.next
+
+# stmt = expr ";
+def stmt():
+    node = expr()
+    expect(";")
+    return node
 
 
 # expr = equality
@@ -105,7 +126,7 @@ def mul():
 #       | primary
 def unary():
     if consume("+"):
-        return primary()
+        return unary()
     if consume("-"):
         return new_binary(NodeKind.ND_SUB, new_node(NodeKind.ND_NUM, 0), primary())
     return primary()
