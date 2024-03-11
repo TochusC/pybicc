@@ -15,7 +15,7 @@
 
     ## 输入样例：
     ---
-        - 7+9*2
+        - 7 + 9 * 2
         - 3+ (4 / 2)
         - 1 != 2
         - 5 == 3+1 + 4
@@ -29,8 +29,8 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    (16 + 3) * (2 / 2);
-    3 + 4;
+    return 3 + 4;
+    return 1 == 2;
 """
 
 DEBUG = True
@@ -38,7 +38,7 @@ DEBUG = True
 
 # 前序遍历输出node，用于调试
 def print_node(node):
-    if node.kind == parse.NodeKind.ND_NUM:
+    if node.val is not None:
         print(node.kind, node.val)
     else:
         print(node.kind)
@@ -50,6 +50,7 @@ def print_node(node):
 
 
 if __name__ == '__main__':
+    print("======词法分析开始======")
     # 词法分析
     tokenize.token = tokenize.tokenize(codeToCompile)
 
@@ -61,6 +62,7 @@ if __name__ == '__main__':
             print(token.kind, token.str)
             token = token.next
 
+    print("======语法分析开始======")
     parse.node = parse.program()
 
     if DEBUG:
@@ -68,13 +70,15 @@ if __name__ == '__main__':
         print("======语法分析结果======")
         print_node(parse.node)
 
+    # TODO 变量定义还未完成，会报错。
     # 编译成汇编代码
     code = codegen.codegen(parse.node)
+    print("======编译开始======")
     if DEBUG:
         # 输出汇编代码，用于调试
         print("======编译结果======")
         print(code)
 
     # 解释执行汇编代码
-    print("======执行结果======")
+    print("======解释执行开始======")
     simulator.run(code)

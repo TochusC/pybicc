@@ -9,7 +9,7 @@ from enum import Enum
 # 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
 stack = []  # 模拟栈
 
-register = [0 for i in range(64)]  # 模拟寄存器
+register = [0 for i in range(128)]  # 模拟寄存器
 
 
 # 寻址模式
@@ -94,6 +94,12 @@ register_index_table = {
     "r13b": 61,
     "r14b": 62,
     "r15b": 63,
+
+    # 标志寄存器
+    "CF": 64,  # 进位标志
+    "ZF": 65,  # 零标志
+    "SF": 66,  # 符号标志
+    "OF": 67,  # 溢出标志
 }
 
 result = 0
@@ -230,7 +236,7 @@ def run_command(command):
             error("push的参数量错误，共有%d个参数", len(segment))
 
     # pop指令:将数据从栈中弹出 通用形式：pop destination
-    if segment[0] == "pop":
+    elif segment[0] == "pop":
         if len(segment) == 2:
             destination = segment[1]
             addressing_mode = addressing(destination)
@@ -249,7 +255,7 @@ def run_command(command):
                 error("pop指令的目的操作数错误, %s", destination)
 
     # 加法指令add 通用形式：add destination, source
-    if segment[0] == "add":
+    elif segment[0] == "add":
         if len(segment) == 3:
             destination = segment[1][:-1]
 
@@ -270,7 +276,7 @@ def run_command(command):
             error("add指令的参数量错误，共有%d个参数", len(segment))
 
     # 减法指令sub 通用形式：sub destination, source
-    if segment[0] == "sub":
+    elif segment[0] == "sub":
         if len(segment) == 3:
             destination = segment[1][:-1]
 
@@ -291,7 +297,7 @@ def run_command(command):
             error("sub指令的参数量错误，共有%d个参数", len(segment))
 
     # 整数乘法指令imul 通用形式：mul destination, source
-    if segment[0] == "imul":
+    elif segment[0] == "imul":
         if len(segment) == 3:
             destination = segment[1][:-1]
 
@@ -313,7 +319,7 @@ def run_command(command):
 
     # 整数除法指令idiv 通用形式：div operand
     # idiv指令实现的有些粗糙，可能出现问题
-    if segment[0] == "idiv":
+    elif segment[0] == "idiv":
         if len(segment) == 2:
             operand = segment[1]
             addressing_mode = addressing(operand)
@@ -334,7 +340,7 @@ def run_command(command):
             error("idiv指令的参数量错误，共有%d个参数", len(segment))
 
     # cqo指令, 将rax的值扩展到rdx:rax中
-    if segment[0] == "cqo":
+    elif segment[0] == "cqo":
         if len(segment) == 1:
             rax_index = register_index_table["rax"]
             rdx_index = register_index_table["rdx"]
@@ -344,7 +350,7 @@ def run_command(command):
             error("cqo指令的参数量错误，共有%d个参数", len(segment))
 
     # 比较指令cmp 通用形式：cmp operand1 operand2
-    if segment[0] == "cmp":
+    elif segment[0] == "cmp":
         if len(segment) == 3:
 
             operand1 = segment[1][:-1]
@@ -383,7 +389,7 @@ def run_command(command):
             error("cmp指令的参数量错误，共有%d个参数", len(segment))
 
     # 设置标志位指令sete 通用形式：sete destination
-    if segment[0] == "sete":
+    elif segment[0] == "sete":
         if len(segment) == 2:
             destination = segment[1]
             addressing_mode = addressing(destination)
@@ -402,7 +408,7 @@ def run_command(command):
             error("sete指令的参数量错误，共有%d个参数", len(segment))
 
     # 设置标志位指令setne 通用形式：setne destination
-    if segment[0] == "setne":
+    elif segment[0] == "setne":
         if len(segment) == 2:
             destination = segment[1]
             addressing_mode = addressing(destination)
@@ -421,7 +427,7 @@ def run_command(command):
             error("setne指令的参数量错误，共有%d个参数", len(segment))
 
     # 设置标志位指令setl 通用形式：setl destination
-    if segment[0] == "setl":
+    elif segment[0] == "setl":
         if len(segment) == 2:
             destination = segment[1]
             addressing_mode = addressing(destination)
@@ -440,7 +446,7 @@ def run_command(command):
             error("setl指令的参数量错误，共有%d个参数", len(segment))
 
     # 设置标志位指令setle 通用形式：setle destination
-    if segment[0] == "setle":
+    elif segment[0] == "setle":
         if len(segment) == 2:
             destination = segment[1]
             addressing_mode = addressing(destination)
@@ -459,8 +465,9 @@ def run_command(command):
         else:
             error("setle指令的参数量错误，共有%d个参数", len(segment))
 
-    # movzb指令，用于将一个字节（8位）的无符号整数值零扩展并移动到指定寄存器。movzb 的含义是 "move zero-extend byte"。
-    if segment[0] == "movb":
+    # movzb指令，用于将一个字节（8位）的无符号整数值零扩展并移动到指定寄存器。
+    # "move zero-extend byte"。
+    elif segment[0] == "movzb":
         if len(segment) == 3:
 
             destination = segment[1][:-1]
@@ -471,17 +478,17 @@ def run_command(command):
                 register_index = register_index_table[destination]
 
                 source = segment[2]
-                addressing_mode, source = addressing(source)
+                addressing_mode = addressing(source)
                 source_value = getValueByAddressing(addressing_mode, source)
                 # TODO 0扩展 依照现在版本的模拟程度， 0扩展不需要实现
 
                 register[register_index] = source_value
 
             else:
-                error("movb指令的目的操作数错误, %s", destination)
+                error("movzb指令的目的操作数错误, %s", destination)
 
         else:
-            error("movb指令的参数量错误，共有%d个参数", len(segment))
+            error("movzb指令的参数量错误，共有%d个参数", len(segment))
 
     # ret指令，用于从函数中返回 通用形式：ret
     elif segment[0] == "ret":
@@ -490,3 +497,7 @@ def run_command(command):
     # print指令，调试用。
     elif segment[0] == "print":
         print("print rax value:", register[register_index_table["rax"]])
+
+    # 调试用
+    # else:
+    #     print("无法识别的指令: ", segment)

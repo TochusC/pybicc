@@ -4,7 +4,7 @@
 ### 具有图形化界面的类C语言编译器 + 汇编代码解释器
 
 
-#### version 0.1.2 
+#### version 0.1.4u
 
 
 [![madewithlove](https://img.shields.io/badge/made_with-%E2%9D%A4-red?style=for-the-badge&labelColor=orange)](https://github.com/TochusC/ai-assistant-teaching-website)
@@ -12,7 +12,7 @@
 [**简体中文**](./README.md) | [**English**](./docs/en/README.md)
 
 
-[中国石油大学(华东)](https://upc.edu.cn/)-编译原理课程设计-一组
+[中国石油大学(华东)](https://upc.edu.cn/)-编译原理课程设计-二组
 
 ---
 
@@ -29,8 +29,13 @@
 </div>
 
 ---
+未完成版本，缺少编译器和解释器实现。
 
-目前只支持包含 + - * / ( ) < > == != <= >= 等运算符的数学表达式。
+目前支持包含 + - * / ( ) < > == != <= >= 等运算符的数学表达式。
+
+支持return语句、以及计算用";"分割的多个表达式。
+
+- 支持变量定义（编译器和解释器未实现）。
 
 不支持浮点数/负数。
 

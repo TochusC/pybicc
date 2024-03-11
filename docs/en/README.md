@@ -4,7 +4,7 @@
 ### A C-Like Compiler + Assembly Code Interpreter with Graphical Interface
 
 
-#### Version 0.1.2 
+#### Version 0.1.4
 
 
 [![madewithlove](https://img.shields.io/badge/made_with-%E2%9D%A4-red?style=for-the-badge&labelColor=orange)](https://github.com/TochusC/ai-assistant-teaching-website)
@@ -12,7 +12,7 @@
 [**简体中文**](./README.md) | [**English**](./docs/en/README.md)
 
 
-[China University of Petroleum (East China)](https://upc.edu.cn/)-Compiler Principle Course Design-Group One
+[China University of Petroleum (East China)](https://upc.edu.cn/)-Compiler Principle Course Design-Group Two
 
 ---
 

@@ -7,6 +7,7 @@ class TokenKind(Enum):
     TK_RESERVED = 1  # Keywords or punctuators 关键字或者标点符号
     TK_NUM = 2  # Integer literals 整数字面量
     TK_EOF = 3  # End-of-file markers 文件结束标记
+    TK_IDENT = 4  # Identifiers 标识符
 
 
 class Token:
@@ -28,22 +29,32 @@ def error(fmt, *args):
 # 如果当前的token匹配op，就消耗掉这个token，返回True
 def consume(op):
     global token
-    # 测试用
+
+    # # 测试用
     # print("Got Token: ", token.kind, token.str)
     # print("Expected: ", TokenKind.TK_RESERVED, op)
     # print()
+
     if (token.kind != TokenKind.TK_RESERVED or token.str != op):
         return False
     token = token.next
     return True
 
 
+def consume_ident():
+    global token
+    if (token.kind != TokenKind.TK_IDENT):
+        return None
+    ident = token
+    token = token.next
+    return ident
+
 # Ensure that the current token is `op`.
 # 确保当前的token是op
 def expect(op):
     global token
     if (token.kind != TokenKind.TK_RESERVED or token.str != op):
-        error("expected '%s'", op)
+        error("Error: expected '%s'", op)
     token = token.next
 
 
@@ -52,7 +63,7 @@ def expect(op):
 def expect_number():
     global token
     if (token.kind != TokenKind.TK_NUM):
-        error("expected a number, but got %s", token.str)
+        error("Error: expected a number, but got %s", token.str)
     val = token.str
     token = token.next
     return val
@@ -60,6 +71,8 @@ def expect_number():
 
 def at_eof():
     global token
+    if token is None:
+        return True
     return token.kind == TokenKind.TK_EOF
 
 
@@ -74,19 +87,43 @@ def tokenize(raw):
     head = Token(TokenKind.TK_RESERVED, None, None)
     cur = head
     while p < len(raw):
+        # 空白字符
         if raw[p].isspace():
             p += 1
             continue
+
+        # 关键字
+        if raw[p:p + 6] == "return" and not raw[p + 6].isalnum():
+            cur.next = Token(TokenKind.TK_RESERVED, "return", None)
+            cur = cur.next
+            p += 6
+            continue
+
+        # 变量标识符
+        if raw[p].isalpha():
+            q = p
+            while q < len(raw) and raw[q].isalnum():
+                q += 1
+            cur.next = Token(TokenKind.TK_IDENT, raw[p:q], None)
+            cur = cur.next
+            p = q
+            continue
+
+        # 多字符运算符
         if raw[p:p + 2] == '==' or raw[p:p + 2] == '!=' or raw[p:p + 2] == '<=' or raw[p:p + 2] == '>=':
             cur.next = Token(TokenKind.TK_RESERVED, raw[p:p + 2], None)
             cur = cur.next
             p += 2
             continue
+
+        # 单字符运算符
         if ispunct(raw[p]):
             cur.next = Token(TokenKind.TK_RESERVED, raw[p], None)
             cur = cur.next
             p += 1
             continue
+
+        # 字面值常量
         if raw[p].isdigit():
             cur.next = Token(TokenKind.TK_NUM, raw[p], None)
             cur = cur.next
