@@ -9,6 +9,31 @@ import parse
 code = ""
 
 
+def gen_addr(node):
+    global code
+    if node.kind == parse.NodeKind.ND_VAR:
+        code += f"  lea rax, [rbp-{node.var.offset}]\n"
+        code += "  push rax\n"
+        return code
+    else:
+        return "not an lvalue"
+
+
+def load():
+    global code
+    code += "  pop rax\n"
+    code += "  mov rax, [rax]\n"
+    code += "  push rax\n"
+
+
+def store():
+    global code
+    code += "  pop rdi\n"
+    code += "  pop rax\n"
+    code += "  mov [rax], rdi\n"
+    code += "  push rdi\n"
+
+
 def gen(node):
     global code
 
@@ -18,11 +43,20 @@ def gen(node):
     elif node.kind == parse.NodeKind.ND_RETURN:
         gen(node.lhs)
         code += "  pop rax\n"
-        code += "  ret\n"
+        code += "  jmp .L.return\n"
         return code
     elif node.kind == parse.NodeKind.ND_EXPR_STMT:
         gen(node.lhs)
         code += "  add rsp, 8\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_VAR:
+        gen_addr(node)
+        load()
+        return code
+    elif node.kind == parse.NodeKind.ND_ASSIGN:
+        gen_addr(node.lhs)
+        gen(node.rhs)
+        store()
         return code
 
     gen(node.lhs)
@@ -61,16 +95,27 @@ def gen(node):
     return code
 
 
-def codegen(node):
+def codegen(prog):
     global code
 
     code += "  .intel_syntax noprefix\n"
     code += "  .global main\n"
     code += "main:\n"
 
+    # 前置工作
+    code += "  push rbp\n"
+    code += "  mov rbp, rsp\n"
+    code += f"  sub rsp, {prog.stack_size}\n"
+
+    node = prog.node
     while node is not None:
         gen(node)
         node = node.next
 
+    # 善后工作
+    code += ".L.return:\n"
+    code += "  mov rsp, rbp\n"
+    code += "  pop rbp\n"
+    code += "  ret\n"
 
     return code

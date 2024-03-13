@@ -49,6 +49,7 @@ def consume_ident():
     token = token.next
     return ident
 
+
 # Ensure that the current token is `op`.
 # 确保当前的token是op
 def expect(op):
@@ -77,7 +78,22 @@ def at_eof():
 
 
 def ispunct(c):
-    return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=', '!', ';']
+    return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
+                 '!', ';', '{', '}']
+
+
+keywords = ["return", "if", "else", "while"]
+ops = ["==", "!=", "<=", ">="]
+
+
+def starts_with_reserved(p, raw):
+    for keyword in keywords:
+        if raw[p:p + len(keyword)] == keyword and not raw[p + len(keyword)].isalnum():
+            return keyword, p + len(keyword)
+    for op in ops:
+        if raw[p:p + len(op)] == op:
+            return op, p + len(op)
+    return None, p
 
 
 # Tokenize `raw` and returns new tokens.
@@ -93,10 +109,10 @@ def tokenize(raw):
             continue
 
         # 关键字
-        if raw[p:p + 6] == "return" and not raw[p + 6].isalnum():
-            cur.next = Token(TokenKind.TK_RESERVED, "return", None)
+        reserved, p = starts_with_reserved(p, raw)
+        if reserved is not None:
+            cur.next = Token(TokenKind.TK_RESERVED, reserved, None)
             cur = cur.next
-            p += 6
             continue
 
         # 变量标识符
@@ -107,13 +123,6 @@ def tokenize(raw):
             cur.next = Token(TokenKind.TK_IDENT, raw[p:q], None)
             cur = cur.next
             p = q
-            continue
-
-        # 多字符运算符
-        if raw[p:p + 2] == '==' or raw[p:p + 2] == '!=' or raw[p:p + 2] == '<=' or raw[p:p + 2] == '>=':
-            cur.next = Token(TokenKind.TK_RESERVED, raw[p:p + 2], None)
-            cur = cur.next
-            p += 2
             continue
 
         # 单字符运算符
@@ -133,6 +142,6 @@ def tokenize(raw):
                 p += 1
             continue
 
-        error("invalid token %s", raw[p])
+        error("invalid token: %s", raw[p])
     cur.next = Token(TokenKind.TK_EOF, None, None)
     return head.next

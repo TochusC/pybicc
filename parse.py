@@ -2,7 +2,31 @@ from enum import Enum
 
 from tokenize import consume, expect, expect_number, at_eof, consume_ident
 
-node = None
+prog = None
+
+locals = None
+
+
+class Var():
+    next = None
+    name = None
+    offset = None
+
+    def __init__(self, next, name, offset):
+        self.next = next
+        self.name = name
+        self.offset = offset
+
+
+class Function:
+    node = None
+    locals = None
+    stack_size = None
+
+    def __init__(self, node, locals, stack_size):
+        self.node = node
+        self.locals = locals
+        self.stack_size = stack_size
 
 
 class NodeKind(Enum):
@@ -20,6 +44,11 @@ class NodeKind(Enum):
     ND_EXPR_STMT = 12  # 表达式语句
     ND_VAR = 13  # 变量
     ND_ASSIGN = 14  # 赋值语句
+    ND_IF = 15  # if 语句
+    ND_WHILE = 15  # while 语句
+    ND_FOR = 16  # for 语句
+    ND_BLOCK = 17  # {}
+    ND_DEFAULT = 18
 
 
 class Node:
@@ -29,12 +58,48 @@ class Node:
     rhs = None
     val = None
 
-    def __init__(self, kind, val=None, lhs=None, rhs=None, next=None):
+    # 变量
+    var = None
+
+    # if, while, for 语句
+    cond = None
+    then = None
+    els = None
+    init = None
+    inc = None
+
+    # {}
+    body = None
+
+    def __init__(self, kind, val=None, lhs=None, rhs=None, next=None,
+                 var=None, cond=None, then=None, els=None):
         self.kind = kind
         self.lhs = lhs
         self.rhs = rhs
         self.val = val
+
         self.next = next
+
+        self.var = var
+
+        self.cond = cond
+        self.then = then
+        self.els = els
+
+
+def find_var(tok):
+    var = locals
+    while var is not None:
+        if var.name == tok.str:
+            return var
+    return None
+
+
+def new_lvar(name):
+    global locals
+    var = Var(locals, name, None)
+    locals = var
+    return var
 
 
 def new_node(kind):
@@ -55,6 +120,9 @@ def new_num(val):
 
 # program = stmt*
 def program():
+    global locals
+    locals = None
+
     head = Node(NodeKind.ND_ROOT)
     cur = head
     while True:
@@ -62,14 +130,24 @@ def program():
             break
         cur.next = stmt()
         cur = cur.next
-    return head.next
+
+    prog = Function(head.next, locals, None)
+    return prog
 
 
-def new_var_node(name):
-    return Node(NodeKind.ND_VAR, name)
+def new_var_node(var):
+    return Node(NodeKind.ND_VAR, var=var)
+
+
+def read_expr_stmt():
+    return new_unary(NodeKind.ND_EXPR_STMT, expr())
 
 
 # stmt = "return" expr ";"
+#      | "if" "(" expr ")" stmt ("else" stmt)?
+#      | "while" "(" expr ")" stmt
+#      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+#      | "{" stmt* "}"
 #      | expr ";"
 def stmt():
     if consume("return"):
@@ -77,7 +155,53 @@ def stmt():
         expect(";")
         return node
 
-    node = new_unary(NodeKind.ND_EXPR_STMT, expr())
+    if consume("if"):
+        node = new_node(NodeKind.ND_IF)
+        expect("(")
+        node.cond = expr()
+        expect(")")
+        node.then = stmt()
+        if consume("else"):
+            node.els = stmt()
+        return node
+
+    if consume("while"):
+        node = new_node(NodeKind)
+        expect("(")
+        node.cond = expr()
+        expect(")")
+        node.then = stmt()
+        return node
+
+    if consume("for"):
+        node = new_node(NodeKind.ND_FOR)
+        expect("(")
+        if not consume(";"):
+            node.init = read_expr_stmt()
+            expect(";")
+        if not consume(";"):
+            node.cond = expr()
+            expect(";")
+        if not consume(")"):
+            node.inc = read_expr_stmt()
+            expect(")")
+        node.then = stmt()
+        return node
+
+    if consume("{"):
+        head = new_node(NodeKind.ND_DEFAULT)
+        cur = head
+
+        while not consume("}"):
+            cur.next = stmt()
+            cur = cur.next
+
+        node = new_node(NodeKind.ND_BLOCK)
+        node.body = head.next
+
+        return node
+
+    node = read_expr_stmt()
     expect(";")
     return node
 
@@ -169,6 +293,9 @@ def primary():
 
     ident = consume_ident()
     if ident is not None:
-        return new_var_node(ident.str)
+        var = find_var(ident)
+        if var is None:
+            var = new_lvar(ident.str)
+        return new_var_node(var)
 
     return new_num(expect_number())

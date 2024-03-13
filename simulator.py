@@ -296,7 +296,7 @@ def run_command(command):
         else:
             error("sub指令的参数量错误，共有%d个参数", len(segment))
 
-    # 整数乘法指令imul 通用形式：mul destination, source
+    # 整数乘法指令imul 通用形式：imul destination, source
     elif segment[0] == "imul":
         if len(segment) == 3:
             destination = segment[1][:-1]

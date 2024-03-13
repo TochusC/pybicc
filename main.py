@@ -1,6 +1,7 @@
 """
-    # pybicc v0.1.3 - 一个简单的类C语言编译器 + 汇编代码解释器
+    # pybicc v0.1.4u - 一个简单的类C语言编译器 + 汇编代码解释器
         目前只支持包含+ - * / ( ) < > == != <= >=等运算符的数学表达式
+        完成了变量定义的词法分析和语法分析
         支持多条以;分隔的表达式。
         不支持浮点数/负数
 
@@ -29,8 +30,7 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    return 3 + 4;
-    return 1 == 2;
+    a = 1;
 """
 
 DEBUG = True
@@ -50,6 +50,8 @@ def print_node(node):
 
 
 if __name__ == '__main__':
+    print("======需要编译的代码=======")
+    print(codeToCompile)
     print("======词法分析开始======")
     # 词法分析
     tokenize.token = tokenize.tokenize(codeToCompile)
@@ -63,16 +65,24 @@ if __name__ == '__main__':
             token = token.next
 
     print("======语法分析开始======")
-    parse.node = parse.program()
+    parse.prog = parse.program()
 
     if DEBUG:
         # 输出node，用于调试
         print("======语法分析结果======")
-        print_node(parse.node)
+        print_node(parse.prog.node)
+
+    offset = 0
+    var = parse.prog.locals
+    while var is not None:
+        offset += 8
+        var.offset = offset
+        var = var.next
+    parse.prog.stack_size = offset
 
     # TODO 变量定义还未完成，会报错。
     # 编译成汇编代码
-    code = codegen.codegen(parse.node)
+    code = codegen.codegen(parse.prog)
     print("======编译开始======")
     if DEBUG:
         # 输出汇编代码，用于调试
