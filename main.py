@@ -30,7 +30,7 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    node(){gen();}
+    main() { x=3; y=5; *(&y-8)=7; return x; }
 """
 
 DEBUG = True
@@ -82,7 +82,22 @@ if __name__ == '__main__':
     if DEBUG:
         # 输出node，用于调试
         print("======语法分析结果======")
-        print_node(parse.prog.node)
+        print("====函数名:", parse.prog.name, "====", sep="")
+
+        print("====函数参数====")
+        params = parse.prog.params
+
+        print("====局部变量====")
+        locals = parse.prog.locals
+
+        print("===函数语句===")
+        func = parse.prog.node
+        while func is not None:
+            print_node(func)
+            func = func.next
+        print("===语句结束===")
+
+
 
     offset = 0
     var = parse.prog.locals

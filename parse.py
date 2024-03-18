@@ -1,5 +1,6 @@
 from enum import Enum
 
+import tokenize
 from tokenize import consume, expect, expect_number, at_eof, consume_ident, expect_indent
 
 
@@ -24,6 +25,8 @@ class NodeKind(Enum):
     ND_BLOCK = 17  # {}
     ND_DEFAULT = 18
     ND_FUNCALL = 19  # 函数调用
+    ND_ADDR = 20  # 引用
+    ND_DEREF = 21  # 解引用
 
 
 class Var():
@@ -74,6 +77,9 @@ class Node:
     rhs = None
     val = None
 
+    # 调试用
+    tok = None
+
     # 变量
     var = None
 
@@ -92,7 +98,7 @@ class Node:
     args = None
 
     def __init__(self, kind, val=None, lhs=None, rhs=None, next=None,
-                 var=None, cond=None, then=None, els=None):
+                 var=None, cond=None, then=None, els=None, tok=None):
         self.kind = kind
         self.lhs = lhs
         self.rhs = rhs
@@ -105,6 +111,8 @@ class Node:
         self.cond = cond
         self.then = then
         self.els = els
+
+        self.tok = tok
 
 
 def find_var(tok):
@@ -128,6 +136,30 @@ def new_lvar(name):
     return var
 
 
+def new_node(kind, tok=None):
+    return Node(kind, tok=tok)
+
+
+def new_binary(kind, lhs, rhs, tok):
+    return Node(kind, 0, lhs, rhs, tok=tok)
+
+
+def new_unary(kind, lhs, tok):
+    return Node(kind, 0, lhs, tok=tok)
+
+
+def new_num(val, tok):
+    return Node(NodeKind.ND_NUM, val, tok=tok)
+
+
+def new_var_node(var, tok):
+    return Node(NodeKind.ND_VAR, var=var, tok=tok)
+
+
+def read_expr_stmt():
+    return new_unary(NodeKind.ND_EXPR_STMT, expr(), tok=tokenize.token)
+
+
 def read_func_params():
     if consume(')'):
         return None
@@ -142,30 +174,6 @@ def read_func_params():
         cur = cur.next
 
     return head
-
-
-def new_node(kind):
-    return Node(kind)
-
-
-def new_binary(kind, lhs, rhs):
-    return Node(kind, 0, lhs, rhs)
-
-
-def new_unary(kind, lhs):
-    return Node(kind, 0, lhs)
-
-
-def new_num(val):
-    return Node(NodeKind.ND_NUM, val)
-
-
-def new_var_node(var):
-    return Node(NodeKind.ND_VAR, var=var)
-
-
-def read_expr_stmt():
-    return new_unary(NodeKind.ND_EXPR_STMT, expr())
 
 
 prog = None
@@ -193,7 +201,7 @@ def function():
     global locals
     locals = None
 
-    fn = Function(expect_indent())
+    fn = Function(name=expect_indent())
     expect('(')
     fn.params = read_func_params()
     expect('{')
@@ -219,7 +227,7 @@ def function():
 #      | expr ";"
 def stmt():
     if consume("return"):
-        node = new_unary(NodeKind.ND_RETURN, expr())
+        node = new_unary(NodeKind.ND_RETURN, expr(), tok = tokenize.token)
         expect(";")
         return node
 
@@ -283,7 +291,7 @@ def expr():
 def assign():
     node = equality()
     if consume("="):
-        node = new_binary(NodeKind.ND_ASSIGN, node, assign())
+        node = new_binary(NodeKind.ND_ASSIGN, node, assign(), tok = tokenize.token)
     return node
 
 
@@ -293,9 +301,9 @@ def equality():
 
     while True:
         if consume("=="):
-            node = new_binary(NodeKind.ND_EQ, node, relational())
+            node = new_binary(NodeKind.ND_EQ, node, relational(), tok = tokenize.token)
         elif consume("!="):
-            node = new_binary(NodeKind.ND_NE, node, relational())
+            node = new_binary(NodeKind.ND_NE, node, relational(), tok = tokenize.token)
         else:
             return node
 
@@ -306,13 +314,13 @@ def relational():
 
     while True:
         if consume("<"):
-            node = new_binary(NodeKind.ND_LT, node, add())
+            node = new_binary(NodeKind.ND_LT, node, add(), tok = tokenize.token)
         elif consume("<="):
-            node = new_binary(NodeKind.ND_LE, node, add())
+            node = new_binary(NodeKind.ND_LE, node, add(), tok = tokenize.token)
         elif consume(">"):
-            node = new_binary(NodeKind.ND_LT, add(), node)
+            node = new_binary(NodeKind.ND_LT, add(), node, tok = tokenize.token)
         elif consume(">="):
-            node = new_binary(NodeKind.ND_LE, add(), node)
+            node = new_binary(NodeKind.ND_LE, add(), node, tok = tokenize.token)
         else:
             return node
 
@@ -323,9 +331,9 @@ def add():
 
     while True:
         if consume("+"):
-            node = new_binary(NodeKind.ND_ADD, node, mul())
+            node = new_binary(NodeKind.ND_ADD, node, mul(), tok = tokenize.token)
         elif consume("-"):
-            node = new_binary(NodeKind.ND_SUB, node, mul())
+            node = new_binary(NodeKind.ND_SUB, node, mul(), tok = tokenize.token)
         else:
             return node
 
@@ -335,20 +343,29 @@ def mul():
     node = unary()
     while True:
         if consume("*"):
-            node = new_binary(NodeKind.ND_MUL, node, unary())
+            node = new_binary(NodeKind.ND_MUL, node, unary(), tok = tokenize.token)
         elif consume("/"):
-            node = new_binary(NodeKind.ND_DIV, node, unary())
+            node = new_binary(NodeKind.ND_DIV, node, unary(), tok = tokenize.token)
         else:
             return node
 
 
-# unary = ("+" | "-")? unary
+# unary = ("+" | "-" | "*" | "&")? unary
 #       | primary
 def unary():
     if consume("+"):
         return unary()
     if consume("-"):
-        return new_binary(NodeKind.ND_SUB, new_node(NodeKind.ND_NUM, 0), primary())
+        return new_binary(NodeKind.ND_SUB,
+                          new_node(NodeKind.ND_NUM, 0),
+                          primary(), tok=tokenize.token)
+    if consume("&"):
+        return new_unary(NodeKind.ND_ADDR,
+                          unary(), tok=tokenize.token)
+    if consume("*"):
+        return new_unary(NodeKind.ND_DIV,
+                          unary(), tok=tokenize.token)
+
     return primary()
 
 
@@ -388,6 +405,6 @@ def primary():
         var = find_var(ident)
         if var is None:
             var = new_lvar(ident.str)
-        return new_var_node(var)
+        return new_var_node(var, tok = tokenize.token)
 
-    return new_num(expect_number())
+    return new_num(expect_number(), tok = tokenize.token)

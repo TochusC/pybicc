@@ -34,16 +34,19 @@ def error(fmt, *args):
 def consume(op):
     global token
     if token is None:
-        return False
+        return None
     # # 测试用
     # print("Got Token: ", token.kind, token.str)
     # print("Expected: ", TokenKind.TK_RESERVED, op)
     # print()
 
     if (token.kind != TokenKind.TK_RESERVED or token.str != op):
-        return False
+        return None
+
+    t = token
+
     token = token.next
-    return True
+    return t
 
 
 def consume_ident():
@@ -100,7 +103,7 @@ def at_eof():
 
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
-                 '!', ';', '{', '}']
+                 '!', ';', '{', '}', '&']
 
 
 keywords = ["return", "if", "else", "while"]
