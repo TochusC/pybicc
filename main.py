@@ -30,7 +30,7 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    a = 1;
+    node(a = 1);
 """
 
 DEBUG = True
@@ -38,16 +38,28 @@ DEBUG = True
 
 # 前序遍历输出node，用于调试
 def print_node(node):
-    if node.val is not None:
-        print(node.kind, node.val)
+
+    if node.kind == parse.NodeKind.ND_NUM:
+        print(node.kind, node.val, end=' ')
+    elif node.kind == parse.NodeKind.ND_VAR:
+        print(node.kind, node.var.name, end=' ')
+
+    elif node.kind == parse.NodeKind.ND_FUNCALL:
+        print(node.funcname, end=' ')
+        args = node.args
+        print("args:", end="\n==函数参数开始==\n")
+        while args is not None:
+            print_node(args)
+            args = args.next
+        print("==函数参数结束==")
     else:
-        print(node.kind)
+        print(node.kind, end=" ")
+    print()
 
     if node.lhs is not None:
         print_node(node.lhs)
     if node.rhs is not None:
         print_node(node.rhs)
-
 
 if __name__ == '__main__':
     print("======需要编译的代码=======")
@@ -80,15 +92,15 @@ if __name__ == '__main__':
         var = var.next
     parse.prog.stack_size = offset
 
-    # TODO 变量定义还未完成，会报错。
-    # 编译成汇编代码
-    code = codegen.codegen(parse.prog)
-    print("======编译开始======")
-    if DEBUG:
-        # 输出汇编代码，用于调试
-        print("======编译结果======")
-        print(code)
-
-    # 解释执行汇编代码
-    print("======解释执行开始======")
-    simulator.run(code)
+    # # TODO 变量定义还未完成，会报错。
+    # # 编译成汇编代码
+    # code = codegen.codegen(parse.prog)
+    # print("======编译开始======")
+    # if DEBUG:
+    #     # 输出汇编代码，用于调试
+    #     print("======编译结果======")
+    #     print(code)
+    #
+    # # 解释执行汇编代码
+    # print("======解释执行开始======")
+    # simulator.run(code)

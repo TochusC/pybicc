@@ -1,5 +1,9 @@
 from enum import Enum
 
+"""
+    词法分析生成Token
+"""
+
 token = None
 
 
@@ -69,6 +73,8 @@ def expect_number():
     token = token.next
     return val
 
+# 确保当前的Token为标识符
+def expect_indent():
 
 def at_eof():
     global token

@@ -19,11 +19,15 @@ class Var():
 
 
 class Function:
+    next = None
+    name = None
     node = None
     locals = None
     stack_size = None
 
-    def __init__(self, node, locals, stack_size):
+    def __init__(self, next, name, node, locals, stack_size):
+        self.next = next
+        self.name = name
         self.node = node
         self.locals = locals
         self.stack_size = stack_size
@@ -49,6 +53,7 @@ class NodeKind(Enum):
     ND_FOR = 16  # for 语句
     ND_BLOCK = 17  # {}
     ND_DEFAULT = 18
+    ND_FUNCALL = 19  # 函数调用
 
 
 class Node:
@@ -70,6 +75,10 @@ class Node:
 
     # {}
     body = None
+
+    # 函数相关
+    funcname = None
+    args = None
 
     def __init__(self, kind, val=None, lhs=None, rhs=None, next=None,
                  var=None, cond=None, then=None, els=None):
@@ -283,8 +292,24 @@ def unary():
         return new_binary(NodeKind.ND_SUB, new_node(NodeKind.ND_NUM, 0), primary())
     return primary()
 
+# func-args = "(" (assign ("," assign)*)? ")"
+def func_args():
+    if consume(')'):
+        return None
 
-# primary = "(" expr ")" | ident | num
+    head = assign()
+    cur = head
+
+    while consume(','):
+        cur.next = assign()
+        cur = cur.next
+
+    expect(')')
+    return head
+
+
+# primary = "(" expr ")" | ident args? | num
+# args = "(" ")"
 def primary():
     if consume("("):
         node = expr()
@@ -293,6 +318,13 @@ def primary():
 
     ident = consume_ident()
     if ident is not None:
+
+        if consume('('):
+            node = new_node(NodeKind.ND_FUNCALL)
+            node.funcname = ident.str
+            node.args = func_args()
+            return node
+
         var = find_var(ident)
         if var is None:
             var = new_lvar(ident.str)
