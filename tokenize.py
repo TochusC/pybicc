@@ -33,7 +33,8 @@ def error(fmt, *args):
 # 如果当前的token匹配op，就消耗掉这个token，返回True
 def consume(op):
     global token
-
+    if token is None:
+        return False
     # # 测试用
     # print("Got Token: ", token.kind, token.str)
     # print("Expected: ", TokenKind.TK_RESERVED, op)
@@ -47,10 +48,16 @@ def consume(op):
 
 def consume_ident():
     global token
-    if (token.kind != TokenKind.TK_IDENT):
+
+    if token is None:
+        return False
+
+    if token.kind != TokenKind.TK_IDENT:
         return None
+
     ident = token
     token = token.next
+
     return ident
 
 
@@ -58,8 +65,8 @@ def consume_ident():
 # 确保当前的token是op
 def expect(op):
     global token
-    if (token.kind != TokenKind.TK_RESERVED or token.str != op):
-        error("Error: expected '%s'", op)
+    if token.kind != TokenKind.TK_RESERVED or token.str != op:
+        error("Error: expected '%s', but got %s", op, token.str)
     token = token.next
 
 
@@ -67,14 +74,22 @@ def expect(op):
 # 确保当前的token是数字
 def expect_number():
     global token
-    if (token.kind != TokenKind.TK_NUM):
+    if token.kind != TokenKind.TK_NUM:
         error("Error: expected a number, but got %s", token.str)
     val = token.str
     token = token.next
     return val
 
+
 # 确保当前的Token为标识符
 def expect_indent():
+    global token
+    if token.kind != TokenKind.TK_IDENT:
+        error("Error: expected an identifier, but got %s", token.str)
+    ident = token.str
+    token = token.next
+    return ident
+
 
 def at_eof():
     global token

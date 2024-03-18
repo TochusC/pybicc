@@ -11,13 +11,11 @@ stack = []  # 模拟栈
 
 register = [0 for i in range(128)]  # 模拟寄存器
 
-
 # 寻址模式
 class AddressingMode(Enum):
     IMMEDIATE = 0
     REGISTER = 1
     MEMORY = 2
-
 
 MAX_64BIT_INT = 0x7FFFFFFFFFFFFFFF
 

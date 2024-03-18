@@ -1,36 +1,6 @@
 from enum import Enum
 
-from tokenize import consume, expect, expect_number, at_eof, consume_ident
-
-prog = None
-
-locals = None
-
-
-class Var():
-    next = None
-    name = None
-    offset = None
-
-    def __init__(self, next, name, offset):
-        self.next = next
-        self.name = name
-        self.offset = offset
-
-
-class Function:
-    next = None
-    name = None
-    node = None
-    locals = None
-    stack_size = None
-
-    def __init__(self, next, name, node, locals, stack_size):
-        self.next = next
-        self.name = name
-        self.node = node
-        self.locals = locals
-        self.stack_size = stack_size
+from tokenize import consume, expect, expect_number, at_eof, consume_ident, expect_indent
 
 
 class NodeKind(Enum):
@@ -54,6 +24,47 @@ class NodeKind(Enum):
     ND_BLOCK = 17  # {}
     ND_DEFAULT = 18
     ND_FUNCALL = 19  # 函数调用
+
+
+class Var():
+    next = None
+    name = None
+    offset = None
+
+    def __init__(self, next, name, offset):
+        self.next = next
+        self.name = name
+        self.offset = offset
+
+
+class VarList:
+    next = None
+    var = None
+
+    def __init__(self, next=None, var=None):
+        self.next = next
+        self.var = var
+
+
+class Function:
+    next = None
+    name = None
+    node = None
+    locals = None
+    stack_size = None
+
+    # 参数
+    params = None
+    # 局部变量
+    locals = None
+
+    def __init__(self, next=None, name=None, node=None,
+                 locals=None, stack_size=None):
+        self.next = next
+        self.name = name
+        self.node = node
+        self.locals = locals
+        self.stack_size = stack_size
 
 
 class Node:
@@ -97,18 +108,40 @@ class Node:
 
 
 def find_var(tok):
-    var = locals
-    while var is not None:
+    var_list = locals
+
+    while var_list is not None:
+        var = var_list.var
         if var.name == tok.str:
             return var
+
     return None
 
 
 def new_lvar(name):
     global locals
     var = Var(locals, name, None)
-    locals = var
+
+    vl = VarList(None, var)
+    vl.next = locals
+
     return var
+
+
+def read_func_params():
+    if consume(')'):
+        return None
+
+    head = VarList()
+    head.var = new_lvar(expect_indent())
+    cur = head
+
+    while not consume(')'):
+        expect(',')
+        cur.next = VarList(None, new_lvar(expect_indent()))
+        cur = cur.next
+
+    return head
 
 
 def new_node(kind):
@@ -127,29 +160,55 @@ def new_num(val):
     return Node(NodeKind.ND_NUM, val)
 
 
-# program = stmt*
-def program():
-    global locals
-    locals = None
-
-    head = Node(NodeKind.ND_ROOT)
-    cur = head
-    while True:
-        if at_eof():
-            break
-        cur.next = stmt()
-        cur = cur.next
-
-    prog = Function(head.next, locals, None)
-    return prog
-
-
 def new_var_node(var):
     return Node(NodeKind.ND_VAR, var=var)
 
 
 def read_expr_stmt():
     return new_unary(NodeKind.ND_EXPR_STMT, expr())
+
+
+prog = None
+
+locals = VarList()
+
+
+# program = function*
+def program():
+    head = Function()
+    cur = head
+
+    while True:
+        if at_eof():
+            break
+        cur.next = function()
+        cur = cur.next
+
+    return head.next
+
+
+# function = ident "(" params? ")" "{" stmt* "}"
+# params   = ident ("," ident)*
+def function():
+    global locals
+    locals = None
+
+    fn = Function(expect_indent())
+    expect('(')
+    fn.params = read_func_params()
+    expect('{')
+
+    head = Node(NodeKind.ND_DEFAULT)
+    cur = head
+
+    while not consume('}'):
+        cur.next = stmt()
+        cur = cur.next
+
+    fn.node = head.next
+    fn.locals = locals
+
+    return fn
 
 
 # stmt = "return" expr ";"
@@ -291,6 +350,7 @@ def unary():
     if consume("-"):
         return new_binary(NodeKind.ND_SUB, new_node(NodeKind.ND_NUM, 0), primary())
     return primary()
+
 
 # func-args = "(" (assign ("," assign)*)? ")"
 def func_args():

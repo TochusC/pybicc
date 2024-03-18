@@ -30,7 +30,7 @@ import parse
 
 # 需要编译的代码
 codeToCompile = """
-    node(a = 1);
+    node(){gen();}
 """
 
 DEBUG = True
