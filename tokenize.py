@@ -49,6 +49,14 @@ def consume(op):
     return t
 
 
+# 如果当前的token是op，返回token，否则返回None
+def peek(s):
+    global token
+    if token.kind != TokenKind.TK_RESERVED or token.str != s:
+        return None
+    return token
+
+
 def consume_ident():
     global token
 
@@ -68,8 +76,8 @@ def consume_ident():
 # 确保当前的token是op
 def expect(op):
     global token
-    if token.kind != TokenKind.TK_RESERVED or token.str != op:
-        error("Error: expected '%s', but got %s", op, token.str)
+    if peek(op) is None:
+        error("Error: expected '%s', but got '%s'", op, token.str)
     token = token.next
 
 
@@ -103,10 +111,10 @@ def at_eof():
 
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
-                 '!', ';', '{', '}', '&']
+                 '!', ';', '{', '}', '&', ',']
 
 
-keywords = ["return", "if", "else", "while"]
+keywords = ["return", "if", "else", "while", "int"]
 ops = ["==", "!=", "<=", ">="]
 
 

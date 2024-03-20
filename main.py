@@ -29,8 +29,28 @@ import tokenize
 import parse
 
 # 需要编译的代码
+# codeToCompile = """
+#  int main() {
+#     int x=3;
+#     int y=5;
+#     return foo(&x, y);
+# }
+# int foo(int *x, int y)
+# {
+#     return *x + y;
+# }
+# """
+
 codeToCompile = """
-    main() { x=3; y=5; *(&y-8)=7; return x; }
+ int main() { 
+    int x=3; 
+    int y=5; 
+    return foo(&x, y); 
+} 
+int foo(int *x, int y) 
+{ 
+    return *x + y; 
+}
 """
 
 DEBUG = True
@@ -82,12 +102,12 @@ if __name__ == '__main__':
     if DEBUG:
         # 输出node，用于调试
         print("======语法分析结果======")
-        print("====函数名:", parse.prog.name, "====", sep="")
+        print("=====函数名:", parse.prog.name, "=====", sep="")
 
-        print("====函数参数====")
+        print("===函数参数===")
         params = parse.prog.params
 
-        print("====局部变量====")
+        print("===局部变量===")
         locals = parse.prog.locals
 
         print("===函数语句===")
@@ -95,7 +115,7 @@ if __name__ == '__main__':
         while func is not None:
             print_node(func)
             func = func.next
-        print("===语句结束===")
+        print("=====函数结束======")
 
 
 
