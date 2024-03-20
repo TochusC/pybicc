@@ -42,15 +42,11 @@ import parse
 # """
 
 codeToCompile = """
- int main() { 
-    int x=3; 
-    int y=5; 
-    return foo(&x, y); 
-} 
-int foo(int *x, int y) 
-{ 
-    return *x + y; 
-}
+ int main() {
+        int x=3;
+        int y=5;
+        return x;
+ }
 """
 
 DEBUG = True
@@ -127,15 +123,14 @@ if __name__ == '__main__':
         var = var.next
     parse.prog.stack_size = offset
 
-    # # TODO 变量定义还未完成，会报错。
-    # # 编译成汇编代码
-    # code = codegen.codegen(parse.prog)
-    # print("======编译开始======")
-    # if DEBUG:
-    #     # 输出汇编代码，用于调试
-    #     print("======编译结果======")
-    #     print(code)
-    #
-    # # 解释执行汇编代码
-    # print("======解释执行开始======")
-    # simulator.run(code)
+    # 编译成汇编代码
+    code = codegen.codegen(parse.prog)
+    print("======编译开始======")
+    if DEBUG:
+        # 输出汇编代码，用于调试
+        print("======编译结果======")
+        print(code)
+
+    # 解释执行汇编代码
+    print("======解释执行开始======")
+    simulator.run(code)

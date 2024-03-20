@@ -4,7 +4,7 @@
 ### 具有图形化界面的类C语言编译器 + 汇编代码解释器
 
 
-#### version 0.1.4u
+#### version 0.1.7u
 
 
 [![madewithlove](https://img.shields.io/badge/made_with-%E2%9D%A4-red?style=for-the-badge&labelColor=orange)](https://github.com/TochusC/ai-assistant-teaching-website)
@@ -30,15 +30,13 @@
 
 ---
 未完成版本，缺少编译器和解释器实现。
+支持的变量类型：int
+支持运算符：+ - * / % == != < <= > >= && || ! = & ^
+支持指针、
 
-目前支持包含 + - * / ( ) < > == != <= >= 等运算符的数学表达式。
-
-支持return语句、以及计算用";"分割的多个表达式。
-
-- 支持变量定义（编译器和解释器未实现）。
-
-不支持浮点数/负数。
-
+## 项目目标🎯：
+   实现一个通过Python模仿的类C语言编译器，能够将C语言代码编译为Intel 80x86汇编代码，
+   并且能够解释执行汇编代码得出运算结果。同时项目还会提供图形化界面，提供部分集成开发环境（IDE）的功能。
 
 ## 代码结构✨：
 

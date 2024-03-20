@@ -40,10 +40,10 @@ def store():
 
 
 def gen(node):
-    global code,labelseq
+    global code, labelseq
 
     if node.kind == parse.NodeKind.ND_NUM:
-        code += "push " + str(node.val) + "\n"
+        code += "  push " + str(node.val) + "\n"
         return code
     elif node.kind == parse.NodeKind.ND_RETURN:
         gen(node.lhs)
@@ -150,15 +150,6 @@ def gen(node):
         code += "  push rax\n"
         return code
 
-
-
-
-
-
-
-
-
-
     gen(node.lhs)
     gen(node.rhs)
 
@@ -196,13 +187,13 @@ def gen(node):
 
 
 def codegen(prog):
-    global code,funcname
+    global code, funcname
 
     code += ".intel_syntax noprefix\n"
     # code += "  .global main\n"
     # code += "main:\n"
 
-    fn=prog
+    fn = prog
     while fn is not  None:
         code += f".global {fn.name}\n"
         code += f"{fn.name}:\n"

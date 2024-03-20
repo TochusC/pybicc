@@ -2,12 +2,13 @@
     Intel 80x86 模拟器
     用于模拟汇编代码的执行过程
 """
+
 from enum import Enum
 
 # 系统内存被分为栈和堆两部分，栈存放程序数据，堆存放操作系统。
 # memory = [heap + stack]
 # 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
-stack = []  # 模拟栈
+memory = [0 for i in range(1024)]  # 模拟内存
 
 register = [0 for i in range(128)]  # 模拟寄存器
 
@@ -140,6 +141,14 @@ def memoryAddressing(memory_address):
     return 0
 
 
+def init():
+    """
+    初始化模拟器
+    """
+    register[register_index_table["rsp"]] = len(memory) - 1  # 初始化栈指针
+    register[register_index_table["rbp"]] = len(memory) - 1  # 初始化栈基指针
+
+
 # 根据寻址模式获取操作数的值
 
 def getValueByAddressing(AddressingMode, source):
@@ -159,8 +168,7 @@ def getValueByAddressing(AddressingMode, source):
     elif AddressingMode == AddressingMode.MEMORY:
         register_index = register_index_table[source[1:-1]]
         memory_address = register[register_index]
-        stack_index = memoryAddressing(memory_address)
-        return stack[stack_index]
+        return memory[memoryAddressing(memory_address)]
 
     else:
         error("无法识别的源操作数: %s", source)
@@ -176,6 +184,8 @@ def run(code):
     :param code: 要执行的汇编代码
     :return: Nothing?
     """
+    init()
+
     global RUNNING_COMMAND_LINE_INDEX
 
     assembler_commands = code.split("\n")  # 将汇编代码按行分割
@@ -229,7 +239,6 @@ def run_command(command):
             source_value = getValueByAddressing(addressing_mode, source)
 
             stack.append(source_value)
-
         else:
             error("push的参数量错误，共有%d个参数", len(segment))
 
