@@ -2,15 +2,16 @@
     Intel 80x86 模拟器
     用于模拟汇编代码的执行过程
 """
-
 from enum import Enum
 
 # 系统内存被分为栈和堆两部分，栈存放程序数据，堆存放操作系统。
 # memory = [heap + stack]
 # 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
-memory = [0 for i in range(1024)]  # 模拟内存
+
+memory = [None] * 128  # 模拟内存，栈底指针暂定为rbp=9
 
 register = [0 for i in range(128)]  # 模拟寄存器
+
 
 # 寻址模式
 class AddressingMode(Enum):
@@ -18,13 +19,17 @@ class AddressingMode(Enum):
     REGISTER = 1
     MEMORY = 2
 
+
 MAX_64BIT_INT = 0x7FFFFFFFFFFFFFFF
 
 # 寄存器索引表
 register_index_table = {
     # 64bit寄存器
     "rax": 0,  # 通常用于存放函数返回值
-    "rsp": 1,  # 栈指针，指向栈顶
+
+    "rsp": 1,  # 栈指针，指向栈顶，
+    "rbp": 9,  # 栈基指针，指向栈底
+
     "rdi": 2,  # 函数参数1
     "rsi": 3,  # 函数参数2
     "rdx": 4,  # 函数参数3
@@ -32,7 +37,6 @@ register_index_table = {
     "r8": 6,  # 函数参数5
     "r9": 7,  # 函数参数6
     "rbx": 8,  # 好像是用于存储数据
-    "rbp": 9,  # 栈基指针，指向栈底
     "r10": 10,  # r10~r15通常用于存放临时变量
     "r11": 11,
     "r12": 12,
@@ -136,21 +140,10 @@ def addressing(source):
 
 
 # TODO
-def memoryAddressing(memory_address):
-    # 根据内存地址，定位到栈的地址
-    return 0
 
-
-def init():
-    """
-    初始化模拟器
-    """
-    register[register_index_table["rsp"]] = len(memory) - 1  # 初始化栈指针
-    register[register_index_table["rbp"]] = len(memory) - 1  # 初始化栈基指针
 
 
 # 根据寻址模式获取操作数的值
-
 def getValueByAddressing(AddressingMode, source):
     """
     根据寻址模式获取操作数的值
@@ -168,7 +161,7 @@ def getValueByAddressing(AddressingMode, source):
     elif AddressingMode == AddressingMode.MEMORY:
         register_index = register_index_table[source[1:-1]]
         memory_address = register[register_index]
-        return memory[memoryAddressing(memory_address)]
+        return memory[memory_address]
 
     else:
         error("无法识别的源操作数: %s", source)
@@ -184,8 +177,6 @@ def run(code):
     :param code: 要执行的汇编代码
     :return: Nothing?
     """
-    init()
-
     global RUNNING_COMMAND_LINE_INDEX
 
     assembler_commands = code.split("\n")  # 将汇编代码按行分割
@@ -238,7 +229,10 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            stack.append(source_value)
+            register[register_index_table['rsp']] -= 8
+            top_index = register[register_index_table['rsp']]
+            memory[top_index] = source_value
+
         else:
             error("push的参数量错误，共有%d个参数", len(segment))
 
@@ -250,13 +244,18 @@ def run_command(command):
 
             if addressing_mode == AddressingMode.REGISTER:
                 register_index = register_index_table[destination]
-                register[register_index] = stack.pop()
+
+                top_index = register[register_index_table['rsp']]
+                register[register_index] = memory[top_index]
+                register[register_index_table['rsp']] += 8
+
 
             elif addressing_mode == AddressingMode.MEMORY:
                 register_index = register_index_table[destination[1:-1]]
                 memory_address = register[register_index]
-                stack_index = memoryAddressing(memory_address)
-                stack[stack_index] = stack.pop()
+                top_index = register[register_index_table['rsp']]
+                memory[memory_address] = memory[top_index]
+                register[register_index_table['rsp']] += 8
 
             else:
                 error("pop指令的目的操作数错误, %s", destination)
@@ -293,7 +292,7 @@ def run_command(command):
                 error("sub指令的目的操作数错误, %s", destination)
 
             source = segment[2]
-            addressing_mode, source = addressing(source)
+            addressing_mode = addressing(source)
 
             source_value = getValueByAddressing(addressing_mode, source)
 
@@ -496,6 +495,68 @@ def run_command(command):
 
         else:
             error("movzb指令的参数量错误，共有%d个参数", len(segment))
+
+    # mov指令 mov opd,ops
+    # 将ops的数据传给opd
+    elif segment[0] == "mov":
+        if len(segment) == 3:
+            op_destination = segment[1][:-1]
+            addressing_mode1 = addressing(op_destination)
+
+            op_source = segment[2]
+            addressing_mode2 = addressing(op_source)
+
+            if addressing_mode1 == AddressingMode.REGISTER:
+                register_index = register_index_table[op_destination]
+                register[register_index] = getValueByAddressing(addressing_mode2, op_source)
+
+            elif addressing_mode1 == AddressingMode.MEMORY:
+                register_index = register_index_table[op_destination[1:-1]]
+                memory_address = register[register_index]
+                memory[memory_address] = getValueByAddressing(addressing_mode2, op_source)
+
+    # lea指令 lea rax, [rbp-8]
+    # 将地址rbp-8传递给rax
+    elif segment[0] == "lea":
+        if len(segment) == 3:
+            op_destination = segment[1][:-1]
+            addressing_mode1 = addressing(op_destination)
+
+            op_source = segment[2]
+            addressing_mode2 = addressing(op_source)
+
+            if addressing_mode1 == AddressingMode.REGISTER:
+                register_index = register_index_table[op_destination]
+                temp = register_index_table[op_source[1:4]]
+                if addressing_mode2 == AddressingMode.MEMORY:
+                    register[register_index] = eval(str(temp) + op_source[4:-1])
+
+    # and指令，and eax ebx
+    # 逻辑与运算,结果赋值给eax
+    elif segment[0] == 'and' or segment[0] == 'or':
+        if segment[0] == 3:
+            op_destination = segment[1][:-1]
+            addressing_mode1 = addressing(op_destination)
+            destination_value = getValueByAddressing(addressing_mode1, op_destination)
+
+            op_source = segment[2]
+            addressing_mode2 = addressing(op_source)
+            source_value = getValueByAddressing(addressing_mode2, op_source)
+
+            ret = 0
+            if segment[0] == 'and':
+                ret = destination_value & source_value
+            else:
+                ret = destination_value | source_value
+
+            if addressing_mode1 == AddressingMode.REGISTER:
+                register_index = register_index_table[op_destination]
+                register[register_index] = ret
+
+            elif addressing_mode1 == AddressingMode.MEMORY:
+                register_index = register_index_table[op_destination[1:-1]]
+                memory_address = register[register_index]
+                memory[memory_address] = ret
 
     # ret指令，用于从函数中返回 通用形式：ret
     elif segment[0] == "ret":

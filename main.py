@@ -42,11 +42,15 @@ import parse
 # """
 
 codeToCompile = """
- int main() {
-        int x=3;
-        int y=5;
-        return x;
- }
+ int main() { 
+    int x=3; 
+    int y=5; 
+    return foo(&x, y); 
+    } 
+    int foo(int *x, int y) 
+    { 
+        return *x + y; 
+    }
 """
 
 DEBUG = True
@@ -54,7 +58,6 @@ DEBUG = True
 
 # 前序遍历输出node，用于调试
 def print_node(node):
-
     if node.kind == parse.NodeKind.ND_NUM:
         print(node.kind, node.val, end=' ')
     elif node.kind == parse.NodeKind.ND_VAR:
@@ -76,6 +79,7 @@ def print_node(node):
         print_node(node.lhs)
     if node.rhs is not None:
         print_node(node.rhs)
+
 
 if __name__ == '__main__':
     print("======需要编译的代码=======")
@@ -113,15 +117,17 @@ if __name__ == '__main__':
             func = func.next
         print("=====函数结束======")
 
-
-
+    fn = parse.prog
+    while fn is not None:
+        offset = 0
+        vl = fn.locals
+        while vl is not None:
+            offset += 8
+            vl.var.offset = offset
+            vl = vl.next
+        fn.stack_size = offset
+        fn = fn.next
     offset = 0
-    var = parse.prog.locals
-    while var is not None:
-        offset += 8
-        var.offset = offset
-        var = var.next
-    parse.prog.stack_size = offset
 
     # 编译成汇编代码
     code = codegen.codegen(parse.prog)
