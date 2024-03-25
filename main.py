@@ -28,28 +28,26 @@ import simulator
 import tokenize
 import parse
 
-# 需要编译的代码
+# 循环有问题
 # codeToCompile = """
 #  int main() {
-#     int x=3;
-#     int y=5;
-#     return foo(&x, y);
-# }
-# int foo(int *x, int y)
-# {
-#     return *x + y;
+#  int x = 0;
+#  while(x <= 10){
+#  x = x + 1;
+#  }
+#  return 0;
 # }
 # """
 
 codeToCompile = """
- int main() { 
-    int x=3; 
-    int y=5; 
-    return foo(&x, y); 
-    } 
-    int foo(int *x, int y) 
-    { 
-        return *x + y; 
+ int main() {
+    int x=3;
+    int y=5;
+    return foo(&x, y);
+    }
+    int foo(int *x, int y)
+    {
+        return *x + y;
     }
 """
 
@@ -64,13 +62,13 @@ def print_node(node):
         print(node.kind, node.var.name, end=' ')
 
     elif node.kind == parse.NodeKind.ND_FUNCALL:
-        print(node.funcname, end=' ')
+        print(node.kind, node.funcname, end='\n')
         args = node.args
-        print("args:", end="\n==函数参数开始==\n")
+        print("==函数参数开始==")
         while args is not None:
             print_node(args)
             args = args.next
-        print("==函数参数结束==")
+        print("==函数参数结束==", end=" ")
     else:
         print(node.kind, end=" ")
     print()
@@ -79,6 +77,7 @@ def print_node(node):
         print_node(node.lhs)
     if node.rhs is not None:
         print_node(node.rhs)
+
 
 
 if __name__ == '__main__':
@@ -99,24 +98,6 @@ if __name__ == '__main__':
     print("======语法分析开始======")
     parse.prog = parse.program()
 
-    if DEBUG:
-        # 输出node，用于调试
-        print("======语法分析结果======")
-        print("=====函数名:", parse.prog.name, "=====", sep="")
-
-        print("===函数参数===")
-        params = parse.prog.params
-
-        print("===局部变量===")
-        locals = parse.prog.locals
-
-        print("===函数语句===")
-        func = parse.prog.node
-        while func is not None:
-            print_node(func)
-            func = func.next
-        print("=====函数结束======")
-
     fn = parse.prog
     while fn is not None:
         offset = 0
@@ -128,6 +109,28 @@ if __name__ == '__main__':
         fn.stack_size = offset
         fn = fn.next
     offset = 0
+
+    if DEBUG:
+        # 输出node，用于调试
+        print("======语法分析结果======")
+        fn = parse.prog
+
+        while fn is not None:
+            print("=====函数名:", fn.name, "=====", sep="")
+            print("===函数参数===")
+            params = fn.params
+
+            print("===局部变量===")
+            locals = fn.locals
+
+            print("===函数语句===")
+            node = fn.node
+            while node is not None:
+                print_node(node)
+                node = node.next
+            print("=====函数结束======")
+            fn = fn.next
+
 
     # 编译成汇编代码
     code = codegen.codegen(parse.prog)

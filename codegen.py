@@ -14,6 +14,7 @@ argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
 funcname = []
 
+
 def gen_addr(node):
     global code
     if node.kind == parse.NodeKind.ND_VAR:
@@ -41,6 +42,9 @@ def store():
 
 def gen(node):
     global code, labelseq
+
+    if node is None:
+        return code
 
     if node.kind == parse.NodeKind.ND_NUM:
         code += "  push " + str(node.val) + "\n"
@@ -96,7 +100,7 @@ def gen(node):
         gen(node.then)
         code += f"  jmp .L.begin.{seq}\n"
         code += f".L.end.{seq}:\n"
-        return  code
+        return code
     elif node.kind == parse.NodeKind.ND_FOR:
         seq = labelseq
         labelseq += 1
@@ -122,19 +126,18 @@ def gen(node):
         return code
     elif node.kind == parse.NodeKind.ND_FUNCALL:
         nargs = 0
-        node = node.args
-        while node is not None:
-            gen(node)
-            node=node.next
-            nargs+=1
+        arg = node.args
+        while arg is not None:
+            gen(arg)
+            arg = arg.next
+            nargs += 1
 
         nargs = len(argreg)
         for i in range(nargs - 1, -1, -1):
             code += f"  pop {argreg[i]}"
 
-
         seq = labelseq
-        labelseq+=1
+        labelseq += 1
         code += "  mov rax, rsp\n"
         code += "  and rax, 15\n"
         code += "  jnz .L.call.{seq}\n"
@@ -194,7 +197,7 @@ def codegen(prog):
     # code += "main:\n"
 
     fn = prog
-    while fn is not  None:
+    while fn is not None:
         code += f".global {fn.name}\n"
         code += f"{fn.name}:\n"
         funcname = fn.name
