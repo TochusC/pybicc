@@ -38,9 +38,13 @@ class NodeKind(Enum):
 
 
 class Var:
-    name = None
-    offset = None
-    ty = None
+    name = None  # 函数名
+    offset = None  # 函数距离RBP的偏移量
+    ty = None  # 类型
+    is_local = None  # 是本地变量还是全局变量
+
+    contents = None
+    cont_len = None
 
 
 class VarList:
@@ -50,6 +54,10 @@ class VarList:
     def __init__(self, next=None, var=None):
         self.next = next
         self.var = var
+
+
+locals = VarList()
+globals = VarList()
 
 
 class Function:
@@ -71,6 +79,11 @@ class Function:
         self.node = node
         self.locals = locals
         self.stack_size = stack_size
+
+
+class Program:
+    globals = None
+    fns = None
 
 
 class Node:
@@ -121,9 +134,25 @@ class Node:
         self.tok = tok
 
 
-def find_var(tok):
-    var_list = locals
+cnt = 0
 
+
+def new_label():
+    global cnt
+    buf = ".L.data." + str(cnt)
+    cnt += 1
+    return buf
+
+
+def find_var(tok=tokenize.token):
+    var_list = locals
+    while var_list is not None:
+        var = var_list.var
+        if var.name == tok.str:
+            return var
+        var_list = var_list.next
+
+    var_list = globals
     while var_list is not None:
         var = var_list.var
         if var.name == tok.str:
@@ -133,9 +162,18 @@ def find_var(tok):
     return None
 
 
+def new_var(name, ty, is_local):
+    var = Var()
+    var.name = name
+    var.ty = ty
+    var.is_local = is_local
+    return var
+
+
 def new_lvar(name, ty):
     global locals
-    var = Var()
+
+    var = new_var(name, ty, True)
     var.name = name
     var.ty = ty
 
@@ -143,6 +181,17 @@ def new_lvar(name, ty):
     vl.var = var
     vl.next = locals
     locals = vl
+    return var
+
+
+def new_gvar(name, ty):
+    global globals
+    var = new_var(name, ty, False)
+
+    vl = VarList()
+    vl.var = var
+    vl.next = globals
+    globals = vl
     return var
 
 
@@ -204,30 +253,53 @@ def read_func_params():
 
 prog = None
 
-locals = VarList()
+
+# 决定最外层的是函数还是全局变量。
+def is_function():
+    tok = tokenize.token
+    basetype()
+    isfunc = consume_ident() and consume('(')
+    tokenize.token = tok
+    return isfunc
 
 
-# program = function*
+# program = (global-var | function)*
 def program():
     head = Function()
     cur = head
+    globals = None
 
     while True:
         if at_eof():
             break
-        cur.next = function()
-        cur = cur.next
+        if is_function():
+            cur.next = function()
+            cur = cur.next
+        else:
+            global_var()
 
-    return head.next
+    prog = Program()
+    prog.globals = globals
+    prog.fns = head.next
+
+    return prog
 
 
-# basetype = "int" "*"*
+def global_var():
+    ty = basetype()
+    name = expect_indent()
+    ty = read_type_suffix(ty)
+    expect(';')
+    new_gvar(name, ty)
+
+
+# basetype =  ("char" | "int") "*"*
 def basetype():
-    expect('int')
-
     ty = type.Type()
-    ty.kind = type.TypeKind.TY_INT
-    ty.size = 8
+    if consume('char'):
+        ty = type.char_type
+    elif consume('int'):
+        ty = type.int_type
 
     while consume('*'):
         ty = type.pointer_to(ty)
@@ -276,6 +348,10 @@ def declaration():
     expect(';')
     node = new_binary(NodeKind.ND_ASSIGN, lhs, rhs, tokenize.token)
     return new_unary(NodeKind.ND_EXPR_STMT, node, tokenize.token)
+
+
+def is_typename():
+    return tokenize.peek("int") or tokenize.peek("char")
 
 
 def stmt():
@@ -342,7 +418,7 @@ def stmt2():
 
         return node
 
-    if tokenize.peek("int") is not None:
+    if is_typename():
         return declaration()
 
     node = read_expr_stmt()
@@ -492,13 +568,18 @@ def func_args():
     return head
 
 
-# primary = "(" expr ")" | ident args? | num
-# args = "(" ")"
+# primary = "(" expr ")" | "sizeof" unary | ident func-args? | str | num
+# args = "(" ident ("," ident)* ")"
 def primary():
     if consume("("):
         node = expr()
         expect(")")
         return node
+
+    if consume("sizeof"):
+        node = unary()
+        add_type(node)
+        return new_num(node.ty.size)
 
     ident = consume_ident()
     if ident is not None:
@@ -516,7 +597,13 @@ def primary():
         return new_var_node(var, tok=tokenize.token)
 
     tok = tokenize.token
-    # if tok.kind != tokenize.TokenKind.TK_NUM:
-    #     tokenize.error("expected an expression, but got %s", tok)
+    if tok.kind == tokenize.TokenKind.TK_STR:
+        tokenize.token = tokenize.token.next
+
+        ty = type.array_of(type.char_type, tok.cont_len)
+        var = new_gvar(new_label(), ty)
+        var.contents = tok.contents
+        var.cont_len = tok.cont_len
+        return new_var_node(var, tok=tok)
 
     return new_num(expect_number(), tok=tokenize.token)

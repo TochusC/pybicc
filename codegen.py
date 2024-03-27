@@ -5,54 +5,72 @@
 """
 
 import parse
+import type
 
 code = ""
 
+argreg1 = ["dil", "sil", "dl", "cl", "r8b", "r9b"]
+argreg8 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
+
 labelseq = 1
-
-argreg = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
-
-funcname = []
+funcname = None
 
 
 def gen_addr(node):
     global code
     if node.kind == parse.NodeKind.ND_VAR:
-        code += f"  lea rax, [rbp-{node.var.offset}]\n"
-        code += "  push rax\n"
+        var = node.var
+        if var.is_local:
+            code += f"  lea rax, [rbp-{var.offset}]\n"
+            code += "  push rax\n"
+        else:
+            code += f"  push offset {var.name}\n"
         return code
+    elif node.kind == parse.NodeKind.ND_DEREF:
+        gen(node.lhs)
+        return code
+
     else:
-        return "not an lvalue"
+        raise Exception(f"Error: {node.tok} is not an lvalue.")
 
 
-def load():
+def gen_lval(node):
+    if node.ty.kind == type.TypeKind.TY_ARRAY:
+        raise Exception(f"Error: {node.tok} is not an lvalue.")
+    gen_addr(node)
+
+
+def load(ty):
     global code
     code += "  pop rax\n"
-    code += "  mov rax, [rax]\n"
+    if ty.size == 1:
+        code += "  movsx rax, byte ptr [rax]\n"
+    else:
+        code += "  mov rax, [rax]\n"
     code += "  push rax\n"
 
 
-def store():
+def store(ty):
     global code
+
     code += "  pop rdi\n"
     code += "  pop rax\n"
-    code += "  mov [rax], rdi\n"
+
+    if ty.size == 1:
+        code += "  mov [rax], dil\n"
+    else:
+        code += "  mov [rax], rdi\n"
+
     code += "  push rdi\n"
 
 
 def gen(node):
     global code, labelseq
 
-    if node is None:
+    if node.kind == parse.NodeKind.ND_NULL:
         return code
-
-    if node.kind == parse.NodeKind.ND_NUM:
-        code += "  push " + str(node.val) + "\n"
-        return code
-    elif node.kind == parse.NodeKind.ND_RETURN:
-        gen(node.lhs)
-        code += "  pop rax\n"
-        code += "  jmp .L.return\n"
+    elif node.kind == parse.NodeKind.ND_NUM:
+        code += "push " + str(node.val) + "\n"
         return code
     elif node.kind == parse.NodeKind.ND_EXPR_STMT:
         gen(node.lhs)
@@ -60,12 +78,21 @@ def gen(node):
         return code
     elif node.kind == parse.NodeKind.ND_VAR:
         gen_addr(node)
-        load()
+        if node.ty.kind != type.TypeKind.TY_ARRAY:
+            load(node.ty)
         return code
     elif node.kind == parse.NodeKind.ND_ASSIGN:
         gen_addr(node.lhs)
         gen(node.rhs)
-        store()
+        store(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_ADDR:
+        gen_addr(node.lhs)
+        return code
+    elif node.kind == parse.NodeKind.ND_DEREF:
+        gen(node.lhs)
+        if node.ty.kind != type.TypeKind.TY_ARRAY:
+            load(node.ty)
         return code
     elif node.kind == parse.NodeKind.ND_IF:
         seq = labelseq
@@ -87,7 +114,6 @@ def gen(node):
             code += f"  je  .L.end.{seq}\n"
             gen(node.then)
             code += f".L.end.{seq}:\n"
-
         return code
     elif node.kind == parse.NodeKind.ND_WHILE:
         seq = labelseq
@@ -132,25 +158,30 @@ def gen(node):
             arg = arg.next
             nargs += 1
 
-        nargs = len(argreg)
         for i in range(nargs - 1, -1, -1):
-            code += f"  pop {argreg[i]}"
+            code += f"  pop {argreg8[i]}"
 
         seq = labelseq
         labelseq += 1
+
         code += "  mov rax, rsp\n"
         code += "  and rax, 15\n"
-        code += "  jnz .L.call.{seq}\n"
+        code += f"  jnz .L.call.{seq}\n"
         code += "  mov rax, 0\n"
         code += f"  call {node.funcname}\n"
-        code += "  jmp .L.end.{seq}\n"
-        code += ".L.call.{seq}:\n"
+        code += f"  jmp .L.end.{seq}\n"
+        code += f".L.call.{seq}:\n"
         code += "  sub rsp, 8\n"
         code += "  mov rax, 0\n"
         code += f"  call {node.funcname}\n"
         code += "  add rsp, 8\n"
         code += f".L.end.{seq}:\n"
         code += "  push rax\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_RETURN:
+        gen(node.lhs)
+        code += "  pop rax\n"
+        code += "  jmp .L.return\n"
         return code
 
     gen(node.lhs)
@@ -161,25 +192,36 @@ def gen(node):
 
     if node.kind == parse.NodeKind.ND_ADD:
         code += "add rax, rdi\n"
+    elif node.kind == parse.NodeKind.ND_PTR_ADD:
+        code += f"  imul rdi, {node.ty.base.size}\n"
+        code += "  add rax, rdi\n"
     elif node.kind == parse.NodeKind.ND_SUB:
         code += "sub rax, rdi\n"
+    elif node.kind == parse.NodeKind.ND_PTR_SUB:
+        code += f"  imul rdi, {node.ty.base.size}\n"
+        code += "  sub rax, rdi\n"
+    elif node.kind == parse.NodeKind.ND_PTR_DIFF:
+        code += "  sub rax, rdi\n"
+        code += "  cqo\n"
+        code += f"  mov rdi, {node.ty.base.size}\n"
+        code += "  idiv rdi\n"
     elif node.kind == parse.NodeKind.ND_MUL:
-        code += "imul rax, rdi\n"
+        code += "  imul rax, rdi\n"
     elif node.kind == parse.NodeKind.ND_DIV:
-        code += "cqo\n"
-        code += "idiv rdi\n"
+        code += "  cqo\n"
+        code += "  idiv rdi\n"
     elif node.kind == parse.NodeKind.ND_EQ:
-        code += "cmp rax, rdi\n"
-        code += "sete al\n"
-        code += "movzb rax, al\n"
+        code += "  cmp rax, rdi\n"
+        code += "  sete al\n"
+        code += "  movzb rax, al\n"
     elif node.kind == parse.NodeKind.ND_NE:
-        code += "cmp rax, rdi\n"
-        code += "setne al\n"
-        code += "movzb rax, al\n"
+        code += "  cmp rax, rdi\n"
+        code += "  setne al\n"
+        code += "  movzb rax, al\n"
     elif node.kind == parse.NodeKind.ND_LT:
-        code += "cmp rax, rdi\n"
-        code += "setl al\n"
-        code += "movzb rax, al\n"
+        code += "  cmp rax, rdi\n"
+        code += "  setl al\n"
+        code += "  movzb rax, al\n"
     elif node.kind == parse.NodeKind.ND_LE:
         code += "cmp rax, rdi\n"
         code += "setle al\n"
@@ -189,14 +231,39 @@ def gen(node):
     return code
 
 
-def codegen(prog):
+def emit_data(prog):
+    global code
+    code += ".data\n"
+    vl = prog.globals
+    while vl is not None:
+        var = vl.var
+        code += f"{var.name}:\n"
+
+        if not var.contents:
+            code += f"  .zero {var.ty.size}\n"
+            continue
+        for i in range(var.cont_len):
+            code += f"  .byte {var.contents[i]}\n"
+        vl = vl.next
+    return code
+
+
+def load_arg(var, idx):
+    global code
+    sz = var.ty.size
+    if sz == 1:
+        code += f"  mov [rbp-{var.offset}], {argreg1[idx]}\n"
+    else:
+        assert sz == 8
+        code += f"  mov [rbp-{var.offset}], {argreg8[idx]}\n"
+
+
+def emit_text(prog):
     global code, funcname
 
-    code += ".intel_syntax noprefix\n"
-    # code += "  .global main\n"
-    # code += "main:\n"
+    code += ".text\n"
 
-    fn = prog
+    fn = prog.fns
     while fn is not None:
         code += f".global {fn.name}\n"
         code += f"{fn.name}:\n"
@@ -207,17 +274,34 @@ def codegen(prog):
         code += "  mov rbp, rsp\n"
         code += f"  sub rsp, {fn.stack_size}\n"
 
+        # 参数入栈
+        i = 0
+        vl = fn.params
+        while vl is not None:
+            var = vl.var
+            load_arg(var, i)
+            i += 1
+            vl = vl.next
+
         node = fn.node
         while node is not None:
             gen(node)
             node = node.next
 
         # 善后工作
-        code += ".L.return:\n"
+        code += f".L.return.{funcname}:\n"
         code += "  mov rsp, rbp\n"
         code += "  pop rbp\n"
         code += "  ret\n"
 
         fn = fn.next
 
+    return code
+
+
+def codegen(prog):
+    global code
+    code += ".intel_syntax noprefix\n"
+    emit_data(prog)
+    emit_text(prog)
     return code

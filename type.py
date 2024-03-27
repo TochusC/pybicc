@@ -6,6 +6,9 @@ class TypeKind(Enum):
     TY_INT = 1
     TY_PTR = 2
     TY_ARRAY = 3
+    TY_CHAR = 4
+    TY_STR = 5
+
 
 
 class Type:
@@ -13,6 +16,16 @@ class Type:
     size = None
     base = None
     array_len = None
+
+    def __init__(self, kind=None, size=None, base=None, array_len=None):
+        self.kind = kind
+        self.size = size
+        self.base = base
+        self.array_len = array_len
+
+
+char_type = Type(kind=TypeKind.TY_CHAR, size=1)
+int_type = Type(kind=TypeKind.TY_INT, size=8)
 
 
 def is_integer(ty):

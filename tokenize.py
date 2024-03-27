@@ -7,11 +7,22 @@ from enum import Enum
 token = None
 
 
+def ispunct(c):
+    return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
+                 '!', '[', ']', ';', '{', '}', '&', ',']
+
+
+keywords = ["return", "if", "else", "while",
+            "int", "sizeof", "char"]
+ops = ["==", "!=", "<=", ">="]
+
+
 class TokenKind(Enum):
     TK_RESERVED = 1  # Keywords or punctuators 关键字或者标点符号
     TK_NUM = 2  # Integer literals 整数字面量
     TK_EOF = 3  # End-of-file markers 文件结束标记
     TK_IDENT = 4  # Identifiers 标识符
+    TK_STR = 5  # String literals 字符串字面值
 
 
 class Token:
@@ -19,6 +30,8 @@ class Token:
     str = ""  # Token string Token字符串
     next = None  # Next token 下一个token
 
+    contents = None
+    cont_len = None
     def __init__(self, kind, str, next):
         self.kind = kind
         self.str = str
@@ -109,15 +122,6 @@ def at_eof():
     return token.kind == TokenKind.TK_EOF
 
 
-def ispunct(c):
-    return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
-                 '!', '[', ']', ';', '{', '}', '&', ',']
-
-
-keywords = ["return", "if", "else", "while", "int"]
-ops = ["==", "!=", "<=", ">="]
-
-
 def starts_with_reserved(p, raw):
     for keyword in keywords:
         if raw[p:p + len(keyword)] == keyword and not raw[p + len(keyword)].isalnum():
@@ -138,6 +142,21 @@ def tokenize(raw):
         # 空白字符
         if raw[p].isspace():
             p += 1
+            continue
+
+        # 字符串字面值
+        if raw[p] == '"':
+            q = p + 1
+            while q < len(raw) and raw[q] != '"':
+                q += 1
+            if q >= len(raw):
+                error("unclosed string")
+
+            cur.next = Token(TokenKind.TK_STR, raw[p + 1:q], None)
+            cur.contents = raw[p + 1:q]
+            cur.cont_len = q - p - 1
+            p = q + 1
+            cur = cur.next
             continue
 
         # 关键字

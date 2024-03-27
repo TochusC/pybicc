@@ -42,9 +42,6 @@ import parse
 codeToCompile = """
 int main() {
  int ans=0;
- while(ans<=10){
-    ans=ans+1;
- }
  return ans;
 }
 """
@@ -62,6 +59,14 @@ int main() {
 # """
 DEBUG = True
 
+def align_to(n, align):
+    """
+    将n对齐到align
+    :param n:
+    :param align:
+    :return:
+    """
+    return (n + align - 1) & ~(align - 1)
 
 # 前序遍历输出node，用于调试
 def print_node(node):
@@ -88,7 +93,6 @@ def print_node(node):
         print_node(node.rhs)
 
 
-
 if __name__ == '__main__':
     print("======需要编译的代码=======")
     print(codeToCompile)
@@ -107,7 +111,7 @@ if __name__ == '__main__':
     print("======语法分析开始======")
     parse.prog = parse.program()
 
-    fn = parse.prog
+    fn = parse.prog.fns
     while fn is not None:
         offset = 0
         vl = fn.locals
@@ -115,14 +119,14 @@ if __name__ == '__main__':
             offset += vl.var.ty.size
             vl.var.offset = offset
             vl = vl.next
-        fn.stack_size = offset
+        fn.stack_size = align_to(offset, 8)
         fn = fn.next
     offset = 0
 
     if DEBUG:
         # 输出node，用于调试
         print("======语法分析结果======")
-        fn = parse.prog
+        fn = parse.prog.fns
 
         while fn is not None:
             print("=====函数名:", fn.name, "=====", sep="")
@@ -139,7 +143,6 @@ if __name__ == '__main__':
                 node = node.next
             print("=====函数结束======")
             fn = fn.next
-
 
     # 编译成汇编代码
     code = codegen.codegen(parse.prog)
