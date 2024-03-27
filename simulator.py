@@ -4,11 +4,13 @@
 """
 from enum import Enum
 
+MEMORY_SIZE = 1024
+
 # 系统内存被分为栈和堆两部分，栈存放程序数据，堆存放操作系统。
 # memory = [heap + stack]
 # 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
 
-memory = [None] * 128  # 模拟内存，栈底指针暂定为rbp=9
+memory = [0 for i in range(MEMORY_SIZE)]  # 模拟内存
 
 register = [0 for i in range(128)]  # 模拟寄存器
 
@@ -26,7 +28,6 @@ MAX_64BIT_INT = 0x7FFFFFFFFFFFFFFF
 register_index_table = {
     # 64bit寄存器
     "rax": 0,  # 通常用于存放函数返回值
-
     "rsp": 1,  # 栈指针，指向栈顶，
     "rbp": 9,  # 栈基指针，指向栈底
 
@@ -139,10 +140,6 @@ def addressing(source):
         return None
 
 
-# TODO
-
-
-
 # 根据寻址模式获取操作数的值
 def getValueByAddressing(AddressingMode, source):
     """
@@ -171,6 +168,11 @@ def getValueByAddressing(AddressingMode, source):
 RUNNING_COMMAND_LINE_INDEX = 0
 
 
+def init():
+    register[register_index_table['rbp']] = MEMORY_SIZE - 128
+    register[register_index_table['rsp']] = MEMORY_SIZE - 128
+
+
 def run(code):
     """
     解释执行汇编代码
@@ -178,6 +180,8 @@ def run(code):
     :return: Nothing?
     """
     global RUNNING_COMMAND_LINE_INDEX
+
+    init()
 
     assembler_commands = code.split("\n")  # 将汇编代码按行分割
 
@@ -246,6 +250,7 @@ def run_command(command):
                 register_index = register_index_table[destination]
 
                 top_index = register[register_index_table['rsp']]
+                # print("top index:", top_index)
                 register[register_index] = memory[top_index]
                 register[register_index_table['rsp']] += 8
 

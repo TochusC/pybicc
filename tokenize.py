@@ -87,7 +87,7 @@ def expect_number():
     global token
     if token.kind != TokenKind.TK_NUM:
         error("Error: expected a number, but got %s", token.str)
-    val = token.str
+    val = int(token.str)
     token = token.next
     return val
 
@@ -111,7 +111,7 @@ def at_eof():
 
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
-                 '!', ';', '{', '}', '&', ',']
+                 '!', '[', ']', ';', '{', '}', '&', ',']
 
 
 keywords = ["return", "if", "else", "while", "int"]

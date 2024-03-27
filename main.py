@@ -40,17 +40,26 @@ import parse
 # """
 
 codeToCompile = """
- int main() {
-    int x=3;
-    int y=5;
-    return foo(&x, y);
-    }
-    int foo(int *x, int y)
-    {
-        return *x + y;
-    }
+int main() {
+ int ans=0;
+ while(ans<=10){
+    ans=ans+1;
+ }
+ return ans;
+}
 """
 
+# codeToCompile = """
+#  int main() {
+#     int x=3;
+#     int y=5;
+#     return foo(&x, y);
+#     }
+#     int foo(int *x, int y)
+#     {
+#         return *x + y;
+#     }
+# """
 DEBUG = True
 
 
@@ -103,7 +112,7 @@ if __name__ == '__main__':
         offset = 0
         vl = fn.locals
         while vl is not None:
-            offset += 8
+            offset += vl.var.ty.size
             vl.var.offset = offset
             vl = vl.next
         fn.stack_size = offset

@@ -1,14 +1,18 @@
 from enum import Enum
 import parse
 
+
 class TypeKind(Enum):
     TY_INT = 1
     TY_PTR = 2
+    TY_ARRAY = 3
 
 
 class Type:
     kind = None
+    size = None
     base = None
+    array_len = None
 
 
 def is_integer(ty):
@@ -21,6 +25,7 @@ def is_integer(ty):
 def pointer_to(base):
     ty = Type()
     ty.kind = TypeKind.TY_PTR
+    ty.size = 8
     ty.base = base
     return ty
 
@@ -80,3 +85,12 @@ def add_type(node):
         else:
             node.ty = TypeKind.TY_INT
         return
+
+
+def array_of(base, length):
+    ty = Type
+    ty.kind = TypeKind.TY_ARRAY
+    ty.size = base.size * length
+    ty.base = base
+    ty.array_len = length
+    return ty

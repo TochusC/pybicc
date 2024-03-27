@@ -146,23 +146,23 @@ def new_lvar(name, ty):
     return var
 
 
-def new_node(kind, tok=None):
+def new_node(kind, tok=tokenize.token):
     return Node(kind, tok=tok)
 
 
-def new_binary(kind, lhs, rhs, tok):
+def new_binary(kind, lhs, rhs, tok=tokenize.token):
     return Node(kind, 0, lhs, rhs, tok=tok)
 
 
-def new_unary(kind, lhs, tok):
+def new_unary(kind, lhs, tok=tokenize.token):
     return Node(kind, 0, lhs, tok=tok)
 
 
-def new_num(val, tok):
+def new_num(val, tok=tokenize.token):
     return Node(NodeKind.ND_NUM, val, tok=tok)
 
 
-def new_var_node(var, tok):
+def new_var_node(var, tok=tokenize.token):
     return Node(NodeKind.ND_VAR, var=var, tok=tok)
 
 
@@ -170,10 +170,20 @@ def read_expr_stmt():
     return new_unary(NodeKind.ND_EXPR_STMT, expr(), tok=tokenize.token)
 
 
+def read_type_suffix(base):
+    if not consume('['):
+        return base
+    sz = expect_number()
+    expect(']')
+    base = read_type_suffix(base)
+    return type.array_of(base, sz)
+
+
 def read_func_param():
-    vl = VarList()
     ty = basetype()
-    vl.var = new_lvar(expect_indent(), ty)
+    name = expect_indent()
+    vl = VarList()
+    vl.var = new_lvar(name, ty)
     return vl
 
 
@@ -214,7 +224,11 @@ def program():
 # basetype = "int" "*"*
 def basetype():
     expect('int')
-    ty = type.TypeKind.TY_INT
+
+    ty = type.Type()
+    ty.kind = type.TypeKind.TY_INT
+    ty.size = 8
+
     while consume('*'):
         ty = type.pointer_to(ty)
     return ty
@@ -246,12 +260,13 @@ def function():
     return fn
 
 
-# declaration = basetype ident ("=" expr) ";"
+# declaration = basetype ident ("[" num "]")* ("=" expr) ";"
 def declaration():
     ty = basetype()
-    ident = expect_indent()
+    name = expect_indent()
+    ty = read_type_suffix(ty)
+    var = new_lvar(name, ty)
 
-    var = new_lvar(ident, ty)
     if consume(';'):
         return new_node(NodeKind.ND_NULL)
 
@@ -378,7 +393,7 @@ def relational():
             return node
 
 
-def new_add(lhs, rhs, tok):
+def new_add(lhs, rhs, tok=tokenize.token):
     add_type(lhs)
     add_type(rhs)
 
@@ -432,7 +447,7 @@ def mul():
 
 
 # unary = ("+" | "-" | "*" | "&")? unary
-#       | primary
+#       | postfix
 def unary():
     if consume("+"):
         return unary()
@@ -447,7 +462,18 @@ def unary():
         return new_unary(NodeKind.ND_DIV,
                          unary(), tok=tokenize.token)
 
-    return primary()
+    return postfix()
+
+
+# postfix = primary ("[" expr "]")*
+def postfix():
+    node = primary()
+
+    while consume('['):
+        exp = new_add(node, expr())
+        expect(']')
+        node = new_unary(NodeKind.ND_DEREF, exp)
+    return node
 
 
 # func-args = "(" (assign ("," assign)*)? ")"
