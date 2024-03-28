@@ -28,27 +28,7 @@ import simulator
 import tokenize
 import parse
 
-# 循环有问题
-# codeToCompile = """
-#  int main() {
-#  int x = 0;
-#  while(x <= 10){
-#  x = x + 1;
-#  }
-#  return 0;
-# }
-# """
-
-codeToCompile = """
-int main() {
- int ans=0;
- while(ans<=10){
- ans=ans+1;
- }
- return ans;
-}
-"""
-
+#
 # codeToCompile = """
 #  int main() {
 #     int x=3;

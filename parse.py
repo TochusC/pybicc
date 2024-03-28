@@ -87,7 +87,7 @@ class Program:
 
 
 class Node:
-    kind = NodeKind
+    kind = NodeKind.ND_NULL
     next = None
     lhs = None
     rhs = None
@@ -116,7 +116,7 @@ class Node:
     funcname = None
     args = None
 
-    def __init__(self, kind, val=None, lhs=None, rhs=None, next=None,
+    def __init__(self, kind=NodeKind.ND_NULL, val=None, lhs=None, rhs=None, next=None,
                  var=None, cond=None, then=None, els=None, tok=None):
         self.kind = kind
         self.lhs = lhs

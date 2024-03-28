@@ -12,7 +12,7 @@ def ispunct(c):
                  '!', '[', ']', ';', '{', '}', '&', ',']
 
 
-keywords = ["return", "if", "else", "while",
+keywords = ["return", "if", "else", "while", "for",
             "int", "sizeof", "char"]
 ops = ["==", "!=", "<=", ">="]
 
@@ -53,7 +53,7 @@ def consume(op):
     # print("Expected: ", TokenKind.TK_RESERVED, op)
     # print()
 
-    if (token.kind != TokenKind.TK_RESERVED or token.str != op):
+    if token.kind != TokenKind.TK_RESERVED or token.str != op:
         return None
 
     t = token
