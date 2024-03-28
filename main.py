@@ -42,6 +42,9 @@ import parse
 codeToCompile = """
 int main() {
  int ans=0;
+ while(ans<=10){
+ ans=ans+1;
+ }
  return ans;
 }
 """
@@ -57,7 +60,9 @@ int main() {
 #         return *x + y;
 #     }
 # """
+
 DEBUG = True
+
 
 def align_to(n, align):
     """
@@ -67,6 +72,7 @@ def align_to(n, align):
     :return:
     """
     return (n + align - 1) & ~(align - 1)
+
 
 # 前序遍历输出node，用于调试
 def print_node(node):
@@ -83,8 +89,45 @@ def print_node(node):
             print_node(args)
             args = args.next
         print("==函数参数结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_IF:
+        print(node.kind, end=" ")
+        print("\n==条件==")
+        print_node(node.cond)
+        print("==then==")
+        print_node(node.then)
+        if node.els is not None:
+            print("==else==")
+            print_node(node.els)
+        print("==结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_WHILE:
+        print(node.kind, end=" ")
+        print("\n==条件==")
+        print_node(node.cond)
+        print("==then==")
+        print_node(node.then)
+        print("==结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_FOR:
+        print(node.kind, end=" ")
+        print("\n==init==")
+        print_node(node.init)
+        print("==cond==")
+        print_node(node.cond)
+        print("==inc==")
+        print_node(node.inc)
+        print("==then==")
+        print_node(node.then)
+        print("==结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_BLOCK:
+        print(node.kind, end=" ")
+        print("\n==block开始==")
+        body = node.body
+        while body is not None:
+            print_node(body)
+            body = body.next
+        print("==block结束==", end=" ")
     else:
         print(node.kind, end=" ")
+
     print()
 
     if node.lhs is not None:

@@ -70,7 +70,7 @@ def gen(node):
     if node.kind == parse.NodeKind.ND_NULL:
         return code
     elif node.kind == parse.NodeKind.ND_NUM:
-        code += "push " + str(node.val) + "\n"
+        code += "  push " + str(node.val) + "\n"
         return code
     elif node.kind == parse.NodeKind.ND_EXPR_STMT:
         gen(node.lhs)
@@ -119,7 +119,7 @@ def gen(node):
         seq = labelseq
         labelseq += 1
         code += f".L.begin.{seq}:\n"
-        gen(node.kind)
+        gen(node.cond)
         code += "  pop rax\n"
         code += "  cmp rax, 0\n"
         code += f"  je  .L.end.{seq}\n"
@@ -187,11 +187,11 @@ def gen(node):
     gen(node.lhs)
     gen(node.rhs)
 
-    code += "pop rdi\n"
-    code += "pop rax\n"
+    code += "  pop rdi\n"
+    code += "  pop rax\n"
 
     if node.kind == parse.NodeKind.ND_ADD:
-        code += "add rax, rdi\n"
+        code += "  add rax, rdi\n"
     elif node.kind == parse.NodeKind.ND_PTR_ADD:
         code += f"  imul rdi, {node.ty.base.size}\n"
         code += "  add rax, rdi\n"
@@ -223,11 +223,11 @@ def gen(node):
         code += "  setl al\n"
         code += "  movzb rax, al\n"
     elif node.kind == parse.NodeKind.ND_LE:
-        code += "cmp rax, rdi\n"
-        code += "setle al\n"
-        code += "movzb rax, al\n"
+        code += "  cmp rax, rdi\n"
+        code += "  setle al\n"
+        code += "  movzb rax, al\n"
 
-    code += "push rax\n"
+    code += "  push rax\n"
     return code
 
 

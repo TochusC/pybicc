@@ -22,17 +22,17 @@ class NodeKind(Enum):
     ND_VAR = 13  # 变量
     ND_ASSIGN = 14  # 赋值语句
     ND_IF = 15  # if 语句
-    ND_WHILE = 15  # while 语句
-    ND_FOR = 16  # for 语句
-    ND_BLOCK = 17  # {}
-    ND_DEFAULT = 18
-    ND_FUNCALL = 19  # 函数调用
-    ND_ADDR = 20  # 引用
-    ND_DEREF = 21  # 解引用
+    ND_WHILE = 16  # while 语句
+    ND_FOR = 17  # for 语句
+    ND_BLOCK = 18  # {}
+    ND_DEFAULT = 19
+    ND_FUNCALL = 20  # 函数调用
+    ND_ADDR = 21  # 引用
+    ND_DEREF = 22  # 解引用
 
-    ND_PTR_ADD = 22  # 指针 + 数字
-    ND_PTR_SUB = 23  # 指针 - 数字
-    ND_PTR_DIFF = 24  # 指针 - 指针
+    ND_PTR_ADD = 23  # 指针 + 数字
+    ND_PTR_SUB = 24  # 指针 - 数字
+    ND_PTR_DIFF = 25  # 指针 - 指针
 
     ND_NULL = 25  # 空
 
@@ -383,7 +383,7 @@ def stmt2():
         return node
 
     if consume("while"):
-        node = new_node(NodeKind)
+        node = new_node(NodeKind.ND_WHILE)
         expect("(")
         node.cond = expr()
         expect(")")
