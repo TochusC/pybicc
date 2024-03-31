@@ -2,7 +2,6 @@
 <img src="docs/static/img/logo.png" style="width: 24%">
 
 <h1> Pybicc💯</h1>
-<hr/>
 
 ### 具有图形化界面的类C语言编译器 + 汇编代码解释器
 
