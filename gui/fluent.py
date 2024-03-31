@@ -43,34 +43,14 @@ class Window(FramelessWindow):
         QTimer.singleShot(600, loop.quit)
         loop.exec()
 
-        # use dark theme mode
-
-
         # 初始化功能类
         self.fileManager = FileManager(self)
         self.signalManager = SignalManager(self)
         self.dataTraveler = DataTraveler(self)
         self.compileController = CompileController(self)
-
         self.comm = self.signalManager.comm
 
-        self.comm.onThemeChange.connect(self.changeTheme)
-
-        self.comm.beforeOpenFile.connect(self.fileManager.open)
-        self.comm.afterOpenFile[dict].connect(self.dataTraveler.loadNewFile)
-
-        self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
-
-        self.comm.beforeCompile.connect(
-            lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
-        self.comm.onCompile[str].connect(
-            lambda code: self.comm.afterCompile.emit(self.compileController.compile(code)))
-        self.comm.afterCompile[str].connect(self.dataTraveler.updateAssembly)
-
-        self.comm.beforeRun.connect(
-            lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
-        self.comm.onRun[str].connect(
-            lambda assembly: self.comm.afterRun.emit(self.compileController.run(assembly)))
+        self.initComm()
 
         self.navigationInterface = NavigationInterface(
             self, showMenuButton=True, showReturnButton=True)
@@ -97,6 +77,25 @@ class Window(FramelessWindow):
         # 关闭启动画面
         self.splashScreen.finish()
 
+    def initComm(self):
+        self.comm.onThemeChange.connect(self.changeTheme)
+
+        self.comm.beforeOpenFile.connect(self.fileManager.open)
+        self.comm.afterOpenFile[dict].connect(self.dataTraveler.loadNewFile)
+
+        self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
+
+        self.comm.beforeCompile.connect(
+            lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
+        self.comm.onCompile[str].connect(
+            lambda code: self.comm.afterCompile.emit(self.compileController.compile(code)))
+        self.comm.afterCompile[str].connect(self.dataTraveler.updateAssembly)
+
+        self.comm.beforeRun.connect(
+            lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
+        self.comm.onRun[str].connect(
+            lambda assembly: self.comm.afterRun.emit(self.compileController.run(assembly)))
+
     def initLayout(self):
         self.gridLayout.setSpacing(0)
         self.gridLayout.addWidget(self.navigationInterface, 0, 0, 2, 1)
@@ -118,7 +117,6 @@ class Window(FramelessWindow):
 
         self.navigationInterface.addSeparator()
 
-        # add navigation items to scroll area
         self.addSubInterface(self.folderInterface, FIF.FOLDER, 'Folder library', NavigationItemPosition.SCROLL)
         # for i in range(1, 21):
         #     self.navigationInterface.addItem(
