@@ -66,7 +66,7 @@ Does not support floating-point numbers / negative numbers.
     ```
 1. Run interface.py, providing a sample of the graphical interface, currently not integrated with the compiler and interpreter
     ```shell
-    python interface.py
+    python NaviInterface.py
     ```
    
    

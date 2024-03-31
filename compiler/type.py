@@ -1,5 +1,5 @@
 from enum import Enum
-import parse
+from compiler import parse
 
 
 class TypeKind(Enum):
@@ -29,7 +29,7 @@ int_type = Type(kind=TypeKind.TY_INT, size=8)
 
 
 def is_integer(ty):
-    if ty.kind == TypeKind.TY_INT:
+    if ty.kind == TypeKind.TY_INT or ty.kind == TypeKind.TY_CHAR:
         return True
     else:
         return False
@@ -44,9 +44,8 @@ def pointer_to(base):
 
 
 def add_type(node):
-    if node is None or node.kind is None:
+    if node is None or node.ty is not None:
         return
-
     add_type(node.lhs)
     add_type(node.rhs)
     add_type(node.cond)
@@ -75,12 +74,10 @@ def add_type(node):
         parse.NodeKind.ND_NE,
         parse.NodeKind.ND_LT,
         parse.NodeKind.ND_LE,
-        parse.NodeKind.ND_VAR,
         parse.NodeKind.ND_FUNCALL,
         parse.NodeKind.ND_NUM,
     ]:
-        node.ty = Type()
-        node.ty.kind = TypeKind.TY_INT
+        node.ty = int_type
         return
     elif node.kind in [
         parse.NodeKind.ND_PTR_ADD,
@@ -89,14 +86,19 @@ def add_type(node):
     ]:
         node.ty = node.lhs.ty
         return
+    elif node.kind == parse.NodeKind.ND_VAR:
+        node.ty = node.var.ty
+        return
     elif node.kind == parse.NodeKind.ND_ADDR:
-        node.ty = pointer_to(node.lhs.ty)
+        if node.lhs.ty.kind == TypeKind.TY_ARRAY:
+            node.ty = pointer_to(node.lhs.ty.base)
+        else:
+            node.ty = pointer_to(node.lhs.ty)
         return
     elif node.kind == parse.NodeKind.ND_DEREF:
-        if node.lhs.ty.kind == TypeKind.TY_PTR:
-            node.ty = node.lhs.ty.base
-        else:
-            node.ty = TypeKind.TY_INT
+        if node.lhs.ty.base is None:
+            raise RuntimeError("invalid pointer dereference", node.lhs.ty)
+        node.ty = node.lhs.ty.base
         return
 
 

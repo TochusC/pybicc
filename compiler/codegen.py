@@ -4,8 +4,7 @@
 ##  将词法分析输出的抽象语法树转换为汇编语言。
 """
 
-import parse
-import type
+from compiler import type, parse
 
 code = ""
 
@@ -25,18 +24,17 @@ def gen_addr(node):
             code += "  push rax\n"
         else:
             code += f"  push offset {var.name}\n"
-        return code
     elif node.kind == parse.NodeKind.ND_DEREF:
         gen(node.lhs)
-        return code
 
     else:
-        raise Exception(f"Error: {node.tok} is not an lvalue.")
+        raise RuntimeError(f"Error: {node.kind, node.tok.str} is not an lvalue.\n")
 
 
 def gen_lval(node):
+    global code
     if node.ty.kind == type.TypeKind.TY_ARRAY:
-        raise Exception(f"Error: {node.tok} is not an lvalue.")
+        raise RuntimeError(f"Error: {node.tok.str} is not an lvalue.\n")
     gen_addr(node)
 
 
@@ -84,7 +82,7 @@ def gen(node):
             load(node.ty)
         return code
     elif node.kind == parse.NodeKind.ND_ASSIGN:
-        gen_addr(node.lhs)
+        gen_lval(node.lhs)
         gen(node.rhs)
         store(node.ty)
         return code
@@ -303,6 +301,7 @@ def emit_text(prog):
 
 def codegen(prog):
     global code
+    code = ""
     code += ".intel_syntax noprefix\n"
     emit_data(prog)
     emit_text(prog)

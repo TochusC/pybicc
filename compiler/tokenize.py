@@ -38,10 +38,6 @@ class Token:
         self.next = next
 
 
-def error(fmt, *args):
-    print(fmt % args)
-
-
 # Consumes the current token if it matches `op`.
 # 如果当前的token匹配op，就消耗掉这个token，返回True
 def consume(op):
@@ -90,7 +86,7 @@ def consume_ident():
 def expect(op):
     global token
     if peek(op) is None:
-        error("Error: expected '%s', but got '%s'", op, token.str)
+        raise RuntimeError("Error: expected '%s', but got '%s'" % (op, token.str))
     token = token.next
 
 
@@ -99,7 +95,7 @@ def expect(op):
 def expect_number():
     global token
     if token.kind != TokenKind.TK_NUM:
-        error("Error: expected a number, but got %s", token.str)
+        raise RuntimeError("Error: expected a number, but got %s" % token.str)
     val = int(token.str)
     token = token.next
     return val
@@ -109,7 +105,7 @@ def expect_number():
 def expect_indent():
     global token
     if token.kind != TokenKind.TK_IDENT:
-        error("Error: expected an identifier, but got %s", token.str)
+        raise RuntimeError("Error: expected an identifier, but got %s" % token.str)
     ident = token.str
     token = token.next
     return ident
@@ -150,7 +146,7 @@ def tokenize(raw):
             while q < len(raw) and raw[q] != '"':
                 q += 1
             if q >= len(raw):
-                error("unclosed string")
+                raise RuntimeError("unclosed string")
 
             cur.next = Token(TokenKind.TK_STR, raw[p + 1:q], None)
             cur.contents = raw[p + 1:q]
@@ -193,6 +189,6 @@ def tokenize(raw):
                 p += 1
             continue
 
-        error("invalid token: %s", raw[p])
+        raise RuntimeError("invalid token: %s" % raw[p])
     cur.next = Token(TokenKind.TK_EOF, None, None)
     return head.next
