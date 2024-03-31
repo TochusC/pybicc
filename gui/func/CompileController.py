@@ -21,8 +21,8 @@ class CompileController:
         return codegen.codegen(parse.prog)
 
     def run(self, assembly):
-        simulator.run(assembly)
-        return simulator.output
+        interpreter.run(assembly)
+        return interpreter.output
 
 
 if __name__ == '__main__':
