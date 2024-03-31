@@ -1,5 +1,5 @@
 """
-    # pybicc v0.2.2u - 一个简单的类C语言编译器 + 汇编代码解释器
+    # pybicc v0.2.4u - 一个简单的类C语言编译器 + 汇编代码解释器
     ---
         未完成版本，缺少解释器实现。
         图形化界面取得了突破性进展🥰
@@ -38,18 +38,8 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 codeToCompile = """
 int main() {
     int x=3;
-    int y=5;
-    int i;
-    for(i = 0; i <= 100; i = i + 1){
-        x = x + 1;
-        y = y + 1;
-    }
-    if(y > x){
-        *(&x+8)=7; return y;
-    }
-    else{
-        int *p=&i; int **z=&p; return **z; 
-    }
+    int y = 4;
+    return x + y;
 }
 """
 
@@ -107,8 +97,8 @@ if __name__ == '__main__':
             fn = fn.next
 
     # 编译成汇编代码
-    code = codegen.codegen(parse.prog)
     print("======编译开始======")
+    code = codegen.codegen(parse.prog)
     if DEBUG:
         # 输出汇编代码，用于调试
         print("======编译结果======")

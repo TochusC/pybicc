@@ -214,7 +214,7 @@ def getMemoryAddress(src):
         nonlocal token
         node = primary()
         while token is not None:
-            if token.str == "+":
+            if token.str == "*":
                 node = Node(NodeKind.ND_MUL, 0, node, primary())
                 token = token.next
 
@@ -223,6 +223,7 @@ def getMemoryAddress(src):
                 token = token.next
             else:
                 return node
+        return node
 
     # primary = num | register | "(" expr ")"
     def primary():
@@ -248,6 +249,7 @@ def getMemoryAddress(src):
     token = tokenize()
     # expr = mul ("+" mul | "-" mul)*
     root = mul()
+
     while token is not None:
         if token.str == "+":
             token = token.next
@@ -257,7 +259,10 @@ def getMemoryAddress(src):
             root = Node(NodeKind.ND_SUB, 0, root, mul())
         else:
             raise RuntimeError("无法识别的字符: %s" % token.str)
-    return eval(root)
+
+    result = eval(root)
+    return result
+
 
 
 # 根据寻址模式获取操作数的值

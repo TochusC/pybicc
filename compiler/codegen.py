@@ -65,6 +65,9 @@ def store(ty):
 def gen(node):
     global code, labelseq
 
+    if node is not None:
+        print(node.kind)
+
     if node is None:
         return code
     elif node.kind == parse.NodeKind.ND_NULL:
