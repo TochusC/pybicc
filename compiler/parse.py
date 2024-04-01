@@ -55,6 +55,7 @@ class VarList:
 
 locals = VarList()
 globals = VarList()
+scope = VarList()
 
 
 class Function:
@@ -142,28 +143,25 @@ def new_label():
 
 
 def find_var(tok=tokenize.token):
-    var_list = locals
+    var_list = scope
     while var_list is not None:
         var = var_list.var
         if var.name == tok.str:
             return var
         var_list = var_list.next
-
-    var_list = globals
-    while var_list is not None:
-        var = var_list.var
-        if var.name == tok.str:
-            return var
-        var_list = var_list.next
-
-    return None
 
 
 def new_var(name, ty, is_local):
+    global scope
     var = Var()
     var.name = name
     var.ty = ty
     var.is_local = is_local
+
+    sc = VarList()
+    sc.var = var
+    sc.next = scope
+    scope = sc
     return var
 
 
@@ -307,11 +305,15 @@ def basetype():
 # param    = basetype ident
 def function():
     global locals
+    global scope
+
     locals = None
 
     basetype()
     fn = Function(name=tokenize.expect_indent())
     tokenize.expect('(')
+
+    sc = scope
     fn.params = read_func_params()
     tokenize.expect('{')
 
@@ -321,6 +323,7 @@ def function():
     while not tokenize.consume('}'):
         cur.next = stmt()
         cur = cur.next
+    scope = sc
 
     fn.node = head.next
     fn.locals = locals
@@ -363,6 +366,7 @@ def stmt():
 #      | "{" stmt* "}"
 #      | expr ";"
 def stmt2():
+    global scope
     if tokenize.consume("return"):
         node = new_unary(NodeKind.ND_RETURN, expr(), tok=tokenize.token)
         tokenize.expect(";")
@@ -405,9 +409,11 @@ def stmt2():
         head = new_node(NodeKind.ND_DEFAULT)
         cur = head
 
+        sc = scope
         while not tokenize.consume("}"):
             cur.next = stmt()
             cur = cur.next
+        scope = sc
 
         node = new_node(NodeKind.ND_BLOCK)
         node.body = head.next

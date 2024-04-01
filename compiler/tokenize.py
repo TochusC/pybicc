@@ -13,7 +13,7 @@ def ispunct(c):
 
 
 keywords = ["return", "if", "else", "while", "for",
-            "int", "sizeof", "char"]
+            "int", "sizeof", "char", "struct", "typedef",]
 ops = ["==", "!=", "<=", ">="]
 
 
@@ -32,6 +32,7 @@ class Token:
 
     contents = None
     cont_len = None
+
     def __init__(self, kind, str, next):
         self.kind = kind
         self.str = str
@@ -128,6 +129,54 @@ def starts_with_reserved(p, raw):
     return None, p
 
 
+def get_escape_char(c):
+    if c == 'a':
+        return '\a'
+    if c == 'b':
+        return '\b'
+    if c == 'f':
+        return '\f'
+    if c == 'n':
+        return '\n'
+    if c == 'r':
+        return '\r'
+    if c == 't':
+        return '\t'
+    if c == 'v':
+        return '\v'
+    if c == '"':
+        return '"'
+    if c == 'e':
+        return 33
+    if c == '0':
+        return 0
+    return c
+
+
+def read_string_literal(raw, start):
+    p = start
+    q = p + 1
+    buf = ''
+
+    while q < len(raw):
+        if raw[q] == '\0':
+            raise RuntimeError("unclosed string")
+        if raw[q] == '"':
+            break
+        if raw[q] == '\\':
+            q += 2
+            buf += get_escape_char(raw[p])
+        else:
+            buf += raw[q]
+            q += 1
+
+    tok = Token(TokenKind.TK_STR, raw[p + 1:q], None)
+    tok.contents = raw[p + 1:q]
+    tok.cont_len = q - p - 1
+
+    return tok
+
+
 # Tokenize `raw` and returns new tokens.
 # 对raw进行tokenize，返回生成的tokens
 def tokenize(raw):
@@ -140,19 +189,24 @@ def tokenize(raw):
             p += 1
             continue
 
+        if raw[p:p+2] == '//':
+            p += 2
+            while raw[p] != '\n':
+                p += 1
+            continue
+
+        if raw[p:p+2] == '/*':
+            p += 2
+            while raw[p:p + 2] != '*/':
+                p += 1
+            p += 2
+            continue
+
         # 字符串字面值
         if raw[p] == '"':
-            q = p + 1
-            while q < len(raw) and raw[q] != '"':
-                q += 1
-            if q >= len(raw):
-                raise RuntimeError("unclosed string")
-
-            cur.next = Token(TokenKind.TK_STR, raw[p + 1:q], None)
-            cur.contents = raw[p + 1:q]
-            cur.cont_len = q - p - 1
-            p = q + 1
+            cur.next = read_string_literal(raw, p)
             cur = cur.next
+            p += cur.cont_len + 2
             continue
 
         # 关键字
