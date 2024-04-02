@@ -26,6 +26,11 @@ def gen_addr(node):
             code += f"  push offset {var.name}\n"
     elif node.kind == parse.NodeKind.ND_DEREF:
         gen(node.lhs)
+    elif node.kind == parse.NodeKind.ND_MEMBER:
+        gen_addr(node.lhs)
+        code += f"  pop rax\n"
+        code += f"  add rax, {node.member.offset}\n"
+        code += "  push rax\n"
 
     else:
         raise RuntimeError(f"Error: {node.kind, node.tok.str} is not an lvalue.\n")
@@ -33,6 +38,7 @@ def gen_addr(node):
 
 def gen_lval(node):
     global code
+    print(node.kind)
     if node.ty.kind == type.TypeKind.TY_ARRAY:
         raise RuntimeError(f"Error: {node.tok.str} is not an lvalue.\n")
     gen_addr(node)
@@ -79,7 +85,8 @@ def gen(node):
         gen(node.lhs)
         code += "  add rsp, 8\n"
         return code
-    elif node.kind == parse.NodeKind.ND_VAR:
+    elif node.kind == parse.NodeKind.ND_VAR\
+            or node.kind == parse.NodeKind.ND_MEMBER:
         gen_addr(node)
         if node.ty.kind != type.TypeKind.TY_ARRAY:
             load(node.ty)
@@ -184,7 +191,7 @@ def gen(node):
     elif node.kind == parse.NodeKind.ND_RETURN:
         gen(node.lhs)
         code += "  pop rax\n"
-        code += "  jmp .L.return\n"
+        code += f"  jmp .L.return.{funcname}\n"
         return code
 
     gen(node.lhs)
@@ -237,6 +244,7 @@ def gen(node):
 def emit_data(prog):
     global code
     code += ".data\n"
+
     vl = prog.globals
     while vl is not None:
         var = vl.var
@@ -244,7 +252,9 @@ def emit_data(prog):
 
         if not var.contents:
             code += f"  .zero {var.ty.size}\n"
+            vl = vl.next
             continue
+
         for i in range(var.cont_len):
             code += f"  .byte {var.contents[i]}\n"
         vl = vl.next

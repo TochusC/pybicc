@@ -32,6 +32,7 @@ class NodeKind(Enum):
     ND_PTR_DIFF = 25  # 指针 - 指针
 
     ND_NULL = 25  # 空
+    ND_MEMBER = 26  # 结构体成员
 
 
 class Var:
@@ -91,6 +92,8 @@ class Node:
     rhs = None
     val = None
 
+    member = None
+
     # 指针
     ty = None  # 表示类型
 
@@ -109,6 +112,8 @@ class Node:
 
     # {}
     body = None
+
+    Member = None
 
     # 函数相关
     funcname = None
@@ -153,6 +158,7 @@ def find_var(tok=tokenize.token):
 
 def new_var(name, ty, is_local):
     global scope
+
     var = Var()
     var.name = name
     var.ty = ty
@@ -221,9 +227,44 @@ def read_type_suffix(base):
     return type.array_of(base, sz)
 
 
+def struct_decl():
+    tokenize.expect("struct")
+    tokenize.expect("{")
+
+    head = type.Member()
+    cur = head
+
+    while not tokenize.consume('}'):
+        cur.next = struct_member()
+        cur = cur.next
+
+    ty = type.Type()
+    ty.kind = type.TypeKind.TY_STRUCT
+    ty.members = head.next
+
+    offset = 0
+    mem = ty.members
+    while mem is not None:
+        mem.offset = offset
+        offset += mem.ty.size
+        mem = mem.next
+    ty.size = offset
+
+    return ty
+
+
+def struct_member():
+    mem = type.Member()
+    mem.ty = basetype()
+    mem.name = tokenize.expect_ident()
+    mem.ty = read_type_suffix(mem.ty)
+    tokenize.expect(';')
+    return mem
+
+
 def read_func_param():
     ty = basetype()
-    name = tokenize.expect_indent()
+    name = tokenize.expect_ident()
     vl = VarList()
     vl.var = new_lvar(name, ty)
     return vl
@@ -247,6 +288,14 @@ def read_func_params():
 prog = None
 
 
+def global_var():
+    ty = basetype()
+    name = tokenize.expect_ident()
+    ty = read_type_suffix(ty)
+    tokenize.expect(';')
+    new_gvar(name, ty)
+
+
 # 决定最外层的是函数还是全局变量。
 def is_function():
     tok = tokenize.token
@@ -258,6 +307,7 @@ def is_function():
 
 # program = (global-var | function)*
 def program():
+    global globals
     head = Function()
     cur = head
     globals = None
@@ -278,22 +328,16 @@ def program():
     return prog
 
 
-def global_var():
-    ty = basetype()
-    name = tokenize.expect_indent()
-    ty = read_type_suffix(ty)
-    tokenize.expect(';')
-    new_gvar(name, ty)
-
-
-# basetype =  ("char" | "int") "*"*
+# basetype =  ("char" | "int" | struct-decl) "*"*
 def basetype():
-    ty = type.Type()
+    if not is_typename():
+        raise RuntimeError("typename expected, but got %s", tokenize.token.str)
     if tokenize.consume('char'):
         ty = type.char_type
-    else:
-        tokenize.expect('int')
+    elif tokenize.consume('int'):
         ty = type.int_type
+    else:
+        ty = struct_decl()
 
     while tokenize.consume('*'):
         ty = type.pointer_to(ty)
@@ -310,7 +354,7 @@ def function():
     locals = None
 
     basetype()
-    fn = Function(name=tokenize.expect_indent())
+    fn = Function(name=tokenize.expect_ident())
     tokenize.expect('(')
 
     sc = scope
@@ -334,7 +378,7 @@ def function():
 # declaration = basetype ident ("[" num "]")* ("=" expr) ";"
 def declaration():
     ty = basetype()
-    name = tokenize.expect_indent()
+    name = tokenize.expect_ident()
     ty = read_type_suffix(ty)
     var = new_lvar(name, ty)
 
@@ -350,7 +394,9 @@ def declaration():
 
 
 def is_typename():
-    return tokenize.peek("int") or tokenize.peek("char")
+    return (tokenize.peek("int")
+            or tokenize.peek("char")
+            or tokenize.peek("struct"))
 
 
 def stmt():
@@ -541,15 +587,43 @@ def unary():
     return postfix()
 
 
-# postfix = primary ("[" expr "]")*
+def find_member(ty, name):
+    mem = ty.members
+    while mem is not None:
+        if mem.name == name:
+            return mem
+        mem = mem.next
+    return None
+
+
+def struct_ref(lhs):
+    type.add_type(lhs)
+    if lhs.ty.kind != type.TypeKind.TY_STRUCT:
+        raise RuntimeError("not a struct", lhs.tok)
+
+    mem = find_member(lhs.ty, tokenize.expect_ident())
+    if mem is None:
+        raise RuntimeError("no such member", tokenize.token)
+
+    node = new_unary(NodeKind.ND_MEMBER, lhs)
+    node.member = mem
+    return node
+
+
+# postfix = primary ("[" expr "]" | "." ident)*
 def postfix():
     node = primary()
 
-    while tokenize.consume('['):
-        exp = new_add(node, expr())
-        tokenize.expect(']')
-        node = new_unary(NodeKind.ND_DEREF, exp)
-    return node
+    while True:
+        if tokenize.consume('['):
+            exp = new_add(node, expr())
+            tokenize.expect(']')
+            node = new_unary(NodeKind.ND_DEREF, exp)
+            continue
+        elif tokenize.consume('.'):
+            node = struct_ref(node)
+            continue
+        return node
 
 
 # func-args = "(" (assign ("," assign)*)? ")"

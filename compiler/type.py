@@ -7,7 +7,15 @@ class TypeKind(Enum):
     TY_PTR = 2
     TY_ARRAY = 3
     TY_CHAR = 4
-    TY_STR = 5
+    TY_STRUCT = 5
+
+
+class Member:
+    def __init__(self):
+        self.name = None
+        self.ty = None
+        self.offset = None
+        self.next = None
 
 
 
@@ -16,6 +24,7 @@ class Type:
     size = None
     base = None
     array_len = None
+    members = None
 
     def __init__(self, kind=None, size=None, base=None, array_len=None):
         self.kind = kind
@@ -33,6 +42,15 @@ def is_integer(ty):
         return True
     else:
         return False
+
+def align_to(n, align):
+    """
+    将n对齐到align
+    :param n:
+    :param align:
+    :return:
+    """
+    return (n + align - 1) & ~(align - 1)
 
 
 def pointer_to(base):

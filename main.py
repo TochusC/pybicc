@@ -36,7 +36,11 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-int main() { int x=2; { int x=3; } return x; }
+int x;
+int main(){
+x = 3;
+return x;
+}
 """
 
 DEBUG = True
@@ -74,8 +78,15 @@ if __name__ == '__main__':
     if DEBUG:
         # 输出node，用于调试
         print("======语法分析结果======")
-        fn = parse.prog.fns
 
+        glbs = parse.prog.globals
+        print("===全局变量===")
+        while glbs is not None:
+            print("变量名:", glbs.var.name, "大小:", glbs.var.ty.size, "offset:", glbs.var.offset)
+            glbs = glbs.next
+        print("===变量结束===")
+
+        fn = parse.prog.fns
         while fn is not None:
             print("=====函数名:", fn.name, "=====", sep="")
             print("===函数参数===")
@@ -94,7 +105,12 @@ if __name__ == '__main__':
 
     # 编译成汇编代码
     print("======编译开始======")
-    code = codegen.codegen(parse.prog)
+    try:
+        code = codegen.codegen(parse.prog)
+    except Exception as e:
+        print("编译错误：", e)
+        print(codegen.code)
+        exit(1)
     if DEBUG:
         # 输出汇编代码，用于调试
         print("======编译结果======")

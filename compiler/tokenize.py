@@ -9,7 +9,7 @@ token = None
 
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
-                 '!', '[', ']', ';', '{', '}', '&', ',']
+                 '!', '[', ']', ';', '{', '}', '&', ',', '.']
 
 
 keywords = ["return", "if", "else", "while", "for",
@@ -103,7 +103,7 @@ def expect_number():
 
 
 # 确保当前的Token为标识符
-def expect_indent():
+def expect_ident():
     global token
     if token.kind != TokenKind.TK_IDENT:
         raise RuntimeError("Error: expected an identifier, but got %s" % token.str)

@@ -12,16 +12,6 @@ def align_to(n, align):
 
 
 
-def align_to(n, align):
-    """
-    将n对齐到align
-    :param n:
-    :param align:
-    :return:
-    """
-    return (n + align - 1) & ~(align - 1)
-
-
 # 前序遍历输出node，用于调试
 def print_node(node):
     if node.kind == parse.NodeKind.ND_NUM:
