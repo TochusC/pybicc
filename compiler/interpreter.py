@@ -264,7 +264,6 @@ def getMemoryAddress(src):
     return result
 
 
-
 # 根据寻址模式获取操作数的值
 def getValueByAddressing(AddressingMode, source):
     """
@@ -287,9 +286,16 @@ def getValueByAddressing(AddressingMode, source):
 
 RUNNING_COMMAND_LINE_INDEX = 0
 
+glb_func = {}
+glb_vars = {}
+
+labels = {}
+
 
 def run(code):
     global output
+    global glb_vars, glb_func
+    global labels
     output = ''
     """
     解释执行汇编代码
@@ -298,14 +304,12 @@ def run(code):
     """
     global RUNNING_COMMAND_LINE_INDEX
 
-    assembler_commands = code.split("\n")  # 将汇编代码按行分割
+    assembly_commands = code.split("\n")  # 将汇编代码按行分割
 
     command_line_index = 0
 
-    while command_line_index < len(assembler_commands):
-        RUNNING_COMMAND_LINE_INDEX = command_line_index  # 记录当前正在执行的代码行
-
-        command_line = assembler_commands[command_line_index]  # 获取当前行的汇编代码
+    while command_line_index < len(assembly_commands):
+        command_line = assembly_commands[command_line_index]  # 获取当前行的汇编代码
 
         command_line_index += 1  # 执行完一行代码后，指针指向下一行, 类似与PC寄存器 # TODO 改为使用PC寄存器进行模拟
 
@@ -314,25 +318,25 @@ def run(code):
 
         command_line = command_line.strip()  # 去掉行首行尾的空格
 
-        # 检查是否是函数入口
-        if command_line[-1] == ":":
-            function_name = command_line[:-1]
+        if command_line[0] == '.':
+            command_segment = command_line.split(" ")
+            if command_segment[0] == ".intel_syntax":
+                pass
+            elif command_segment[0] == '.data':
+                # 处理全局变量 TODO
+                glb_vars = {}
+            elif command_segment[0] == '.text':
+                pass
+            elif command_segment[0] == '.global':
+                glb_func[command_segment[1]] = command_line_index + 1
 
-            # 记录函数入口的行号
-            function_entry_index_table[function_name] = RUNNING_COMMAND_LINE_INDEX + 1
 
-            # 如果是main函数，则直接调用
-            if function_name == "main":
-                RUNNING_COMMAND_LINE_INDEX += 1
-                while assembler_commands[RUNNING_COMMAND_LINE_INDEX][0:2] != "  ":
-                    command = assembler_commands[RUNNING_COMMAND_LINE_INDEX]
-
-                    run_command(command)
-                    RUNNING_COMMAND_LINE_INDEX += 1
-
-                command_line_index = RUNNING_COMMAND_LINE_INDEX
-        else:
-            run_command(command_line)
+    RUNNING_COMMAND_LINE_INDEX = glb_func['main']
+    RUNNING_COMMAND_LINE_INDEX += 1
+    while RUNNING_COMMAND_LINE_INDEX < len(assembly_commands):
+        command = assembly_commands[RUNNING_COMMAND_LINE_INDEX]
+        run_command(command)
+        RUNNING_COMMAND_LINE_INDEX += 1
 
 
 def run_command(command):

@@ -169,7 +169,7 @@ def gen(node):
             nargs += 1
 
         for i in range(nargs - 1, -1, -1):
-            code += f"  pop {argreg8[i]}"
+            code += f"  pop {argreg8[i]}\n"
 
         seq = labelseq
         labelseq += 1

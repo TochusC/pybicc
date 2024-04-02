@@ -36,11 +36,11 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-int x;
+
 int main(){
-x = 3;
-return x;
+return 1;
 }
+
 """
 
 DEBUG = True
