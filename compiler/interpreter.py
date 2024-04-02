@@ -285,24 +285,34 @@ def getValueByAddressing(AddressingMode, source):
 
 
 RUNNING_COMMAND_LINE_INDEX = 0
+CURRENT_FUNC = 'main'
+RETURN_INDEX = 0
+PREV_FUNC = None
 
-glb_func = {}
+
+class Func:
+    def __init__(self):
+        self.labels = {}
+        self.entry = None
+        self.ret = None
+
+
 glb_vars = {}
-
-labels = {}
+glb_func = {}
 
 
 def run(code):
+    """
+      解释执行汇编代码
+      :param code: 要执行的汇编代码
+      :return: Nothing?
+    """
     global output
     global glb_vars, glb_func
     global labels
+    global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX
+
     output = ''
-    """
-    解释执行汇编代码
-    :param code: 要执行的汇编代码
-    :return: Nothing?
-    """
-    global RUNNING_COMMAND_LINE_INDEX
 
     assembly_commands = code.split("\n")  # 将汇编代码按行分割
 
@@ -328,19 +338,34 @@ def run(code):
             elif command_segment[0] == '.text':
                 pass
             elif command_segment[0] == '.global':
-                glb_func[command_segment[1]] = command_line_index + 1
+                current_func = Func()
+                glb_func[command_segment[1]] = current_func
+                command_line_index += 1
+                current_func.entry = command_line_index
+                while command_line_index < len(assembly_commands):
+                    command_line = assembly_commands[command_line_index]
+                    command = command_line.strip()
+                    if command[0:2] == '.L':
+                        current_func.labels[command[:-1]] = command_line_index + 1
+                    elif command[0:3] == 'ret':
+                        current_func.ret = command_line_index
+                        break
+                    command_line_index += 1
 
+    RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
 
-    RUNNING_COMMAND_LINE_INDEX = glb_func['main']
-    RUNNING_COMMAND_LINE_INDEX += 1
     while RUNNING_COMMAND_LINE_INDEX < len(assembly_commands):
+        # 取完指令，RUNNING_COMMAND_LINE_INDEX自增
         command = assembly_commands[RUNNING_COMMAND_LINE_INDEX]
-        run_command(command)
         RUNNING_COMMAND_LINE_INDEX += 1
+        command = command.strip()
+        # 运行指令
+        run_command(command)
 
 
 def run_command(command):
     global output
+    global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX, RETURN_INDEX, PREV_FUNC
     # print("RUNNING INDEX: %d" % RUNNING_COMMAND_LINE_INDEX, "COMMAND: ", command) # DEBUG USE
 
     segment = command.split(" ")  # 将每行汇编代码按空格分割
@@ -662,15 +687,60 @@ def run_command(command):
 
             elif addressing_mode1 == AddressingMode.MEMORY:
                 memory[getMemoryAddress(op_destination)] = ret
-
-    # ret指令，用于从函数中返回 通用形式：ret
-    elif segment[0] == "ret":
-        output += "return value:" + str(register['rax']) + "\n"
-
     # print指令，调试用。
     elif segment[0] == "print":
         output += "print rax value:" + str(register['rax']) + "\n"
+    elif segment[0] == "jmp":
+        if len(segment) == 2:
+            label = segment[1]
+            if label in glb_func[CURRENT_FUNC].labels:
+                RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
+            else:
+                raise RuntimeError("未找到标签: %s" % label)
+        else:
+            raise RuntimeError("jmp指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "jnz":
+        if len(segment) == 2:
+            label = segment[1]
+            if register['ZF'] == 0:
+                if label in glb_func[CURRENT_FUNC].labels:
+                    RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
+                else:
+                    raise RuntimeError("未找到标签: %s" % label)
+        else:
+            raise RuntimeError("jnz指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "je":
+        if len(segment) == 2:
+            label = segment[1]
+            if register['ZF'] == 1:
+                if label in glb_func[CURRENT_FUNC].labels:
+                    RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
+                else:
+                    raise RuntimeError("未找到标签: %s" % label)
+        else:
+            raise RuntimeError("je指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "call":
+        if len(segment) == 2:
+            func_name = segment[1]
+            if func_name in glb_func:
+                PREV_FUNC = CURRENT_FUNC
+                RETURN_INDEX = RUNNING_COMMAND_LINE_INDEX
 
+                CURRENT_FUNC = func_name
+                RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
+            else:
+                raise RuntimeError("未找到函数: %s" % func_name)
+        else:
+            raise RuntimeError("call指令的参数量错误，共有%d个参数" % len(segment))
+    # ret指令，用于从函数中返回 通用形式：ret
+    elif segment[0] == "ret":
+        if CURRENT_FUNC == 'main':
+            output += "return value:" + str(register['rax']) + "\n"
+        else:
+            RUNNING_COMMAND_LINE_INDEX = RETURN_INDEX
+            CURRENT_FUNC = PREV_FUNC
     # 调试用
-    # else:
-    #     print("无法识别的指令: ", segment)
+    else:
+        if not (segment[0] == "" or segment[0][0] == "."):
+            # 空指令或标签跳过
+            print("无法识别的指令: ", segment[0])

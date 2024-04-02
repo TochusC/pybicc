@@ -111,7 +111,7 @@ def gen(node):
             gen(node.cond)
             code += "  pop rax\n"
             code += "  cmp rax, 0\n"
-            code += f"  je  .L.else.{seq}\n"
+            code += f"  je .L.else.{seq}\n"
             gen(node.then)
             code += f"  jmp .L.end.{seq}\n"
             code += f".L.else.{seq}:\n"
@@ -121,7 +121,7 @@ def gen(node):
             gen(node.cond)
             code += "  pop rax\n"
             code += "  cmp rax, 0\n"
-            code += f"  je  .L.end.{seq}\n"
+            code += f"  je .L.end.{seq}\n"
             gen(node.then)
             code += f".L.end.{seq}:\n"
         return code
@@ -132,7 +132,7 @@ def gen(node):
         gen(node.cond)
         code += "  pop rax\n"
         code += "  cmp rax, 0\n"
-        code += f"  je  .L.end.{seq}\n"
+        code += f"  je .L.end.{seq}\n"
         gen(node.then)
         code += f"  jmp .L.begin.{seq}\n"
         code += f".L.end.{seq}:\n"
@@ -147,7 +147,7 @@ def gen(node):
             gen(node.cond)
             code += "  pop rax\n"
             code += "  cmp rax, 0\n"
-            code += f"  je  .L.end.{seq}\n"
+            code += f"  je .L.end.{seq}\n"
         gen(node.then)
         if node.inc:
             gen(node.inc)

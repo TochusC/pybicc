@@ -36,9 +36,15 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-
+int fun(int x){
+return x;
+}
 int main(){
-return 1;
+int ans =0;
+while (ans < 10){
+ ans = ans + 1;
+ }
+ return ans;
 }
 
 """
