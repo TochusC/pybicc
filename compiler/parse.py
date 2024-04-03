@@ -9,9 +9,16 @@ class TagScope:
     ty = None
 
 
+class VarScope:
+    next = None
+    name = None
+    var = None
+    typedef = None
+
+
 class Scope:
-    var_scope = None
-    tag_scope = None
+    var_scope = VarScope()
+    tag_scope = TagScope()
 
 
 class NodeKind(Enum):
@@ -148,7 +155,7 @@ cnt = 0
 locals = VarList()
 globals = VarList()
 
-var_scope = VarList()
+var_scope = VarScope()
 tag_scope = TagScope()
 
 
@@ -160,8 +167,9 @@ def enter_scope():
 
 
 def leave_scope(sc):
-    tagScope = sc.tag_scope
-    varScope = sc.var_scope
+    global var_scope, tag_scope
+    var_scope = sc.var_scope
+    tag_scope = sc.tag_scope
 
 
 def new_label():
@@ -173,12 +181,12 @@ def new_label():
 
 def find_var(tok=tokenize.token):
     global var_scope
-    var_list = var_scope
-    while var_list is not None:
-        var = var_list.var
-        if var.name == tok.str:
-            return var
-        var_list = var_list.next
+    sc = var_scope
+    while sc is not None:
+        if sc.name == tok.str:
+            return sc
+        sc = sc.next
+    return None
 
 
 def find_tag(tok):
@@ -210,6 +218,8 @@ def new_lvar(name, ty):
     global locals
 
     var = new_var(name, ty, True)
+    sc = push_scope(name)
+    sc.var = var
 
     vl = VarList()
     vl.var = var
@@ -221,6 +231,8 @@ def new_lvar(name, ty):
 def new_gvar(name, ty):
     global globals
     var = new_var(name, ty, False)
+    sc = push_scope(name)
+    sc.var = var
 
     vl = VarList()
     vl.var = var
@@ -228,6 +240,13 @@ def new_gvar(name, ty):
     globals = vl
     return var
 
+
+def find_typedef(tok):
+    if tok.kind == tokenize.TokenKind.TK_IDENT:
+        sc = find_var(tok)
+        if sc is not None:
+            return sc.typedef
+    return None
 
 def new_node(kind, tok=tokenize.token):
     return Node(kind, tok=tok)
@@ -247,6 +266,15 @@ def new_num(val, tok=tokenize.token):
 
 def new_var_node(var, tok=tokenize.token):
     return Node(NodeKind.ND_VAR, var=var, tok=tok)
+
+
+def push_scope(name):
+    global var_scope
+    sc = VarScope()
+    sc.next = var_scope
+    sc.name = name
+    var_scope = sc
+    return sc
 
 
 def read_expr_stmt():
@@ -463,7 +491,8 @@ def declaration():
 def is_typename():
     return (tokenize.peek("int")
             or tokenize.peek("char")
-            or tokenize.peek("struct"))
+            or tokenize.peek("struct")
+            or find_typedef(tokenize.token))
 
 
 def stmt():
@@ -477,6 +506,8 @@ def stmt():
 #      | "while" "(" expr ")" stmt
 #      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
 #      | "{" stmt* "}"
+#      | "typedef" basetype ident ("[" num "]")* ";"
+#      | declaration
 #      | expr ";"
 def stmt2():
     if tokenize.consume("return"):
@@ -531,6 +562,15 @@ def stmt2():
         node.body = head.next
 
         return node
+
+    if tokenize.consume("typedef"):
+        ty = basetype()
+        name = tokenize.expect_ident()
+        ty = read_type_suffix(ty)
+        tokenize.expect(";")
+        sc = push_scope(name)
+        sc.typedef = ty
+        return new_node(NodeKind.ND_NULL)
 
     if is_typename():
         return declaration()
@@ -735,10 +775,11 @@ def primary():
             return node
 
         # 变量
-        var = find_var(ident)
-        if var is None:
+        sc = find_var(ident)
+        if sc is not None and sc.var is not None:
+            return new_var_node(sc.var)
+        else:
             raise RuntimeError("undefined variable: %s", ident.str)
-        return new_var_node(var)
 
     tok = tokenize.token
     if tok.kind == tokenize.TokenKind.TK_STR:

@@ -37,7 +37,8 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
 int main(){
-return "123";
+int x = 3;
+return x;
 }
 """
 
