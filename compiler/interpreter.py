@@ -286,8 +286,7 @@ def getValueByAddressing(AddressingMode, source):
 
 RUNNING_COMMAND_LINE_INDEX = 0
 CURRENT_FUNC = 'main'
-RETURN_INDEX = 0
-PREV_FUNC = None
+PREV_FUNC = []
 
 
 class Func:
@@ -352,7 +351,6 @@ def run(code):
                     command_line_index += 1
 
     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
-
     while RUNNING_COMMAND_LINE_INDEX < len(assembly_commands):
         # 取完指令，RUNNING_COMMAND_LINE_INDEX自增
         command = assembly_commands[RUNNING_COMMAND_LINE_INDEX]
@@ -364,7 +362,7 @@ def run(code):
 
 def run_command(command):
     global output
-    global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX, RETURN_INDEX, PREV_FUNC
+    global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX, PREV_FUNC
     # print("RUNNING INDEX: %d" % RUNNING_COMMAND_LINE_INDEX, "COMMAND: ", command) # DEBUG USE
 
     segment = command.split(" ")  # 将每行汇编代码按空格分割
@@ -764,9 +762,8 @@ def run_command(command):
         if len(segment) == 2:
             func_name = segment[1]
             if func_name in glb_func:
-                PREV_FUNC = CURRENT_FUNC
-                RETURN_INDEX = RUNNING_COMMAND_LINE_INDEX
 
+                PREV_FUNC.append({'func': CURRENT_FUNC, 'index': RUNNING_COMMAND_LINE_INDEX})
                 CURRENT_FUNC = func_name
                 RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
             else:
@@ -777,9 +774,11 @@ def run_command(command):
     elif segment[0] == "ret":
         if CURRENT_FUNC == 'main':
             output += "return value:" + str(register['rax']) + "\n"
+            RUNNING_COMMAND_LINE_INDEX = MAX_64BIT_INT
         else:
-            RUNNING_COMMAND_LINE_INDEX = RETURN_INDEX
-            CURRENT_FUNC = PREV_FUNC
+            return_info = PREV_FUNC.pop()
+            CURRENT_FUNC = return_info['func']
+            RUNNING_COMMAND_LINE_INDEX = return_info['index']
     # 调试用
     else:
         if not (segment[0] == "" or segment[0][0] == "."):

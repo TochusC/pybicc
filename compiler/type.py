@@ -10,6 +10,8 @@ class TypeKind(Enum):
     TY_STRUCT = 5
     TY_SHORT = 6
     TY_LONG = 7
+    TY_FUNC = 8
+    TY_VOID = 9
 
 
 class Member:
@@ -27,6 +29,7 @@ class Type:
     base = None
     array_len = None
     members = None
+    return_ty = None
 
     def __init__(self, kind=None, size=None, base=None, array_len=None, align=0):
         self.kind = kind
@@ -36,6 +39,7 @@ class Type:
         self.array_len = array_len
 
 
+void_type = Type(kind=TypeKind.TY_VOID, size=1, align=1)
 char_type = Type(kind=TypeKind.TY_CHAR, size=1, align=1)
 int_type = Type(kind=TypeKind.TY_INT, size=4, align=4)
 short_type = Type(kind=TypeKind.TY_SHORT, size=2, align=2)
@@ -69,6 +73,11 @@ def pointer_to(base):
     ty = new_type(TypeKind.TY_PTR, 8, 8)
     return ty
 
+
+def func_type(return_ty):
+    ty = new_type(TypeKind.TY_FUNC, 1, 1)
+    ty.return_ty = return_ty
+    return ty
 
 def add_type(node):
     if node is None or node.ty is not None:
@@ -129,6 +138,8 @@ def add_type(node):
         if node.lhs.ty.base is None:
             raise RuntimeError("invalid pointer dereference", node.lhs.ty)
         node.ty = node.lhs.ty.base
+        if node.ty.kind == TypeKind.TY_VOID:
+            raise RuntimeError("dereferencing a void pointer")
         return
 
 

@@ -40,7 +40,6 @@ def gen_addr(node):
 
 def gen_lval(node):
     global code
-    print(node.kind)
     if node.ty.kind == type.TypeKind.TY_ARRAY:
         raise RuntimeError(f"Error: {node.tok.str} is not an lvalue.\n")
     gen_addr(node)
@@ -90,9 +89,6 @@ def store(ty):
 
 def gen(node):
     global code, labelseq
-
-    if node is not None:
-        print(node.kind)
 
     if node is None:
         return code

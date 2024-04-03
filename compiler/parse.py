@@ -207,10 +207,6 @@ def new_var(name, ty, is_local):
     var.ty = ty
     var.is_local = is_local
 
-    sc = VarList()
-    sc.var = var
-    sc.next = var_scope
-    var_scope = sc
     return var
 
 
@@ -228,16 +224,18 @@ def new_lvar(name, ty):
     return var
 
 
-def new_gvar(name, ty):
+def new_gvar(name, ty, emit):
     global globals
+
     var = new_var(name, ty, False)
     sc = push_scope(name)
     sc.var = var
 
-    vl = VarList()
-    vl.var = var
-    vl.next = globals
-    globals = vl
+    if emit:
+        vl = VarList()
+        vl.var = var
+        vl.next = globals
+        globals = vl
     return var
 
 
@@ -385,7 +383,7 @@ def global_var():
     name = tokenize.expect_ident()
     ty = read_type_suffix(ty)
     tokenize.expect(';')
-    new_gvar(name, ty)
+    new_gvar(name, ty, True)
 
 
 # 决定最外层的是函数还是全局变量。
@@ -408,8 +406,10 @@ def program():
         if tokenize.at_eof():
             break
         if is_function():
-            cur.next = function()
-            cur = cur.next
+            fn = function()
+            if fn is not None:
+                cur.next = fn
+                cur = cur.next
         else:
             global_var()
 
@@ -420,12 +420,14 @@ def program():
     return prog
 
 
-# basetype = type "*"*
-# type = "char" | "short" | "int" | "long" | struct-decl | typedef-name
+# basetype = builtin-type | struct-decl | typedef-name
+# builtin-type = "void" | "char" | "short" | "int" | "long"
 def basetype():
     if not is_typename():
         raise RuntimeError("typename expected, but got %s", tokenize.token.str)
-    if tokenize.consume('char'):
+    if tokenize.consume('void'):
+        ty = type.void_type
+    elif tokenize.consume('char'):
         ty = type.char_type
     elif tokenize.consume('short'):
         ty = type.short_type
@@ -441,7 +443,7 @@ def basetype():
     return ty
 
 
-# function = basetype ident "(" params? ")" "{" stmt* "}"
+# function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
 # params   = param ("," param)*
 # param    = basetype ident
 def function():
@@ -449,17 +451,24 @@ def function():
 
     locals = None
 
-    basetype()
+    ty = basetype()
     fn = Function(name=tokenize.expect_ident())
+
+    new_gvar(fn.name, type.func_type(ty), False)
+
     tokenize.expect('(')
 
     sc = enter_scope()
     fn.params = read_func_params()
-    tokenize.expect('{')
 
+    if tokenize.consume(';'):
+        leave_scope(sc)
+        return None
+
+    # 读取函数体
     head = Node(NodeKind.ND_DEFAULT)
     cur = head
-
+    tokenize.expect('{')
     while not tokenize.consume('}'):
         cur.next = stmt()
         cur = cur.next
@@ -499,6 +508,7 @@ def is_typename():
             or tokenize.peek("struct")
             or tokenize.peek("short")
             or tokenize.peek("long")
+            or tokenize.peek("void")
             or find_typedef(tokenize.token))
 
 
@@ -793,7 +803,7 @@ def primary():
         tokenize.token = tokenize.token.next
 
         ty = type.array_of(type.char_type, tok.cont_len)
-        var = new_gvar(new_label(), ty)
+        var = new_gvar(new_label(), ty, True)
         var.contents = tok.contents
         var.cont_len = tok.cont_len
         return new_var_node(var, tok=tok)
