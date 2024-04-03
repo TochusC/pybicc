@@ -2,10 +2,16 @@ from enum import Enum
 
 from compiler import tokenize, type
 
+
 class TagScope:
     next = None
     name = None
     ty = None
+
+
+class Scope:
+    var_scope = None
+    tag_scope = None
 
 
 class NodeKind(Enum):
@@ -57,11 +63,6 @@ class VarList:
     def __init__(self, next=None, var=None):
         self.next = next
         self.var = var
-
-
-locals = VarList()
-globals = VarList()
-scope = VarList()
 
 
 class Function:
@@ -144,6 +145,24 @@ class Node:
 
 cnt = 0
 
+locals = VarList()
+globals = VarList()
+
+var_scope = VarList()
+tag_scope = TagScope()
+
+
+def enter_scope():
+    sc = Scope()
+    sc.var_scope = var_scope
+    sc.tag_scope = tag_scope
+    return sc
+
+
+def leave_scope(sc):
+    tagScope = sc.tag_scope
+    varScope = sc.var_scope
+
 
 def new_label():
     global cnt
@@ -153,7 +172,8 @@ def new_label():
 
 
 def find_var(tok=tokenize.token):
-    var_list = scope
+    global var_scope
+    var_list = var_scope
     while var_list is not None:
         var = var_list.var
         if var.name == tok.str:
@@ -161,8 +181,18 @@ def find_var(tok=tokenize.token):
         var_list = var_list.next
 
 
+def find_tag(tok):
+    global tag_scope
+    tag = tag_scope
+    while tag is not None:
+        if tag.name == tok.str:
+            return tag
+        tag = tag.next
+    return None
+
+
 def new_var(name, ty, is_local):
-    global scope
+    global var_scope
 
     var = Var()
     var.name = name
@@ -171,8 +201,8 @@ def new_var(name, ty, is_local):
 
     sc = VarList()
     sc.var = var
-    sc.next = scope
-    scope = sc
+    sc.next = var_scope
+    var_scope = sc
     return var
 
 
@@ -232,10 +262,31 @@ def read_type_suffix(base):
     return type.array_of(base, sz)
 
 
+def push_tag_scope(tok, ty):
+    global tag_scope
+    sc = TagScope()
+    sc.next = tag_scope
+    sc.name = tok.str
+    sc.ty = ty
+    tag_scope = sc
+
+
+# struct-decl = "struct" ident
+#             | "struct" ident? "{" struct-member "}"
 def struct_decl():
     tokenize.expect("struct")
+
+    tag = tokenize.consume_ident()
+
+    if tag is not None and not tokenize.peek("{"):
+        sc = find_tag(tag)
+        if sc is None:
+            raise RuntimeError("unknown struct type", tokenize.token)
+        return sc.ty
+
     tokenize.expect("{")
 
+    # 读取结构体成员
     head = type.Member()
     cur = head
 
@@ -261,6 +312,8 @@ def struct_decl():
 
     ty.size = type.align_to(offset, ty.align)
 
+    if tag is not None:
+        push_tag_scope(tag, ty)
     return ty
 
 
@@ -360,7 +413,6 @@ def basetype():
 # param    = basetype ident
 def function():
     global locals
-    global scope
 
     locals = None
 
@@ -368,7 +420,7 @@ def function():
     fn = Function(name=tokenize.expect_ident())
     tokenize.expect('(')
 
-    sc = scope
+    sc = enter_scope()
     fn.params = read_func_params()
     tokenize.expect('{')
 
@@ -378,7 +430,7 @@ def function():
     while not tokenize.consume('}'):
         cur.next = stmt()
         cur = cur.next
-    scope = sc
+    leave_scope(sc)
 
     fn.node = head.next
     fn.locals = locals
@@ -387,8 +439,12 @@ def function():
 
 
 # declaration = basetype ident ("[" num "]")* ("=" expr) ";"
+#             | basetype ";"
 def declaration():
     ty = basetype()
+    if tokenize.consume(';'):
+        return new_node(NodeKind.ND_NULL)
+
     name = tokenize.expect_ident()
     ty = read_type_suffix(ty)
     var = new_lvar(name, ty)
@@ -423,7 +479,6 @@ def stmt():
 #      | "{" stmt* "}"
 #      | expr ";"
 def stmt2():
-    global scope
     if tokenize.consume("return"):
         node = new_unary(NodeKind.ND_RETURN, expr(), tok=tokenize.token)
         tokenize.expect(";")
@@ -466,11 +521,11 @@ def stmt2():
         head = new_node(NodeKind.ND_DEFAULT)
         cur = head
 
-        sc = scope
+        sc = enter_scope()
         while not tokenize.consume("}"):
             cur.next = stmt()
             cur = cur.next
-        scope = sc
+        leave_scope(sc)
 
         node = new_node(NodeKind.ND_BLOCK)
         node.body = head.next
