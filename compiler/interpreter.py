@@ -309,7 +309,6 @@ def run(code):
     """
     global output
     global glb_vars, glb_func
-    global labels
     global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX
 
     output = ''
