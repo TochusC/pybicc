@@ -13,7 +13,8 @@ def ispunct(c):
 
 
 keywords = ["return", "if", "else", "while", "for",
-            "int", "sizeof", "char", "struct", "typedef",]
+            "int", "short", "long", "void", "char",
+            "sizeof", "struct", "typedef",]
 ops = ["==", "!=", "<=", ">=", "->"]
 
 

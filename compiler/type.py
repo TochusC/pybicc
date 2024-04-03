@@ -8,6 +8,8 @@ class TypeKind(Enum):
     TY_ARRAY = 3
     TY_CHAR = 4
     TY_STRUCT = 5
+    TY_SHORT = 6
+    TY_LONG = 7
 
 
 class Member:
@@ -35,14 +37,13 @@ class Type:
 
 
 char_type = Type(kind=TypeKind.TY_CHAR, size=1, align=1)
-int_type = Type(kind=TypeKind.TY_INT, size=8, align=8)
-
+int_type = Type(kind=TypeKind.TY_INT, size=4, align=4)
+short_type = Type(kind=TypeKind.TY_SHORT, size=2, align=2)
+long_type = Type(kind=TypeKind.TY_LONG, size=8, align=8)
 
 def is_integer(ty):
-    if ty.kind == TypeKind.TY_INT or ty.kind == TypeKind.TY_CHAR:
-        return True
-    else:
-        return False
+    kd = ty.kind
+    return kd in [TypeKind.TY_INT, TypeKind.TY_CHAR, TypeKind.TY_SHORT, TypeKind.TY_LONG]
 
 def align_to(n, align):
     """
@@ -103,7 +104,7 @@ def add_type(node):
         parse.NodeKind.ND_FUNCALL,
         parse.NodeKind.ND_NUM,
     ]:
-        node.ty = int_type
+        node.ty = long_type
         return
     elif node.kind in [
         parse.NodeKind.ND_PTR_ADD,

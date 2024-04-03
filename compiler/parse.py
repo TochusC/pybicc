@@ -420,14 +420,19 @@ def program():
     return prog
 
 
-# basetype =  ("char" | "int" | struct-decl) "*"*
+# basetype = type "*"*
+# type = "char" | "short" | "int" | "long" | struct-decl | typedef-name
 def basetype():
     if not is_typename():
         raise RuntimeError("typename expected, but got %s", tokenize.token.str)
     if tokenize.consume('char'):
         ty = type.char_type
+    elif tokenize.consume('short'):
+        ty = type.short_type
     elif tokenize.consume('int'):
         ty = type.int_type
+    elif tokenize.consume('long'):
+        ty = type.long_type
     else:
         ty = struct_decl()
 
@@ -492,6 +497,8 @@ def is_typename():
     return (tokenize.peek("int")
             or tokenize.peek("char")
             or tokenize.peek("struct")
+            or tokenize.peek("short")
+            or tokenize.peek("long")
             or find_typedef(tokenize.token))
 
 

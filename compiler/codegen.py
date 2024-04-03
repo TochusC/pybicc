@@ -9,6 +9,8 @@ from compiler import type, parse
 code = ""
 
 argreg1 = ["dil", "sil", "dl", "cl", "r8b", "r9b"]
+argreg2 = ["di", "si", "dx", "cx", "r8w", "r9w"]
+argreg4 = ["edi", "esi", "edx", "ecx", "r8d", "r9d"]
 argreg8 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
 labelseq = 1
@@ -47,25 +49,43 @@ def gen_lval(node):
 def load(ty):
     global code
     code += "  pop rax\n"
+
     if ty.size == 1:
         code += "  movsx rax, byte ptr [rax]\n"
-    else:
+    elif ty.size == 2:
+        code += "  movsx rax, word ptr [rax]\n"
+    elif ty.size == 4:
+        code += "  movsxd rax, dword ptr [rax]\n"
+    elif ty.size == 8:
         code += "  mov rax, [rax]\n"
+
     code += "  push rax\n"
 
 
 def store(ty):
     global code
 
-    code += "  pop rdi\n"
-    code += "  pop rax\n"
-
     if ty.size == 1:
+        code += "  pop dil\n"
+        code += "  pop rax\n"
         code += "  mov [rax], dil\n"
-    else:
+        code += "  push dil\n"
+    elif ty.size == 2:
+        code += "  pop di\n"
+        code += "  pop rax\n"
+        code += "  mov [rax], di\n"
+        code += "  push di\n"
+    elif ty.size == 4:
+        code += "  pop edi\n"
+        code += "  pop rax\n"
+        code += "  mov [rax], edi\n"
+        code += "  push edi\n"
+    elif ty.size == 8:
+        code += "  pop rdi\n"
+        code += "  pop rax\n"
         code += "  mov [rax], rdi\n"
+        code += "  push rdi\n"
 
-    code += "  push rdi\n"
 
 
 def gen(node):
@@ -266,9 +286,13 @@ def load_arg(var, idx):
     sz = var.ty.size
     if sz == 1:
         code += f"  mov [rbp-{var.offset}], {argreg1[idx]}\n"
-    else:
-        assert sz == 8
+    elif sz == 2:
+        code += f"  mov [rbp-{var.offset}], {argreg2[idx]}\n"
+    elif sz == 4:
+        code += f"  mov [rbp-{var.offset}], {argreg4[idx]}\n"
+    elif sz == 8:
         code += f"  mov [rbp-{var.offset}], {argreg8[idx]}\n"
+
 
 
 def emit_text(prog):

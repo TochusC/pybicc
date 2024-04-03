@@ -625,6 +625,48 @@ def run_command(command):
         else:
             raise RuntimeError("movzb指令的参数量错误，共有%d个参数" % len(segment))
 
+    # movsx指令，用于将一个字节（8位）的有符号整数值符号扩展并移动到指定寄存器。
+    elif segment[0] == "movsx":
+        if len(segment) == 5:
+
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode == AddressingMode.REGISTER:
+                source = segment[4]
+                addressing_mode = addressing(source)
+                source_value = getValueByAddressing(addressing_mode, source)
+                # TODO 符号扩展 依照现在版本的模拟程度， 符号扩展不需要实现
+
+                register[destination] = source_value
+
+            else:
+                raise RuntimeError("movsb指令的目的操作数错误, %s" % destination)
+
+        else:
+            raise RuntimeError("movsb指令的参数量错误，共有%d个参数" % len(segment))
+    # movsxd指令，用于将一个双字（32位）的符号整数值符号扩展并移动到指定寄存器。
+    elif segment[0] == "movsxd":
+        if len(segment) == 5:
+
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode == AddressingMode.REGISTER:
+                source = segment[4]
+                addressing_mode = addressing(source)
+                source_value = getValueByAddressing(addressing_mode, source)
+                # TODO 符号扩展 依照现在版本的模拟程度， 符号扩展不需要实现
+                register[destination] = source_value
+
+            else:
+                raise RuntimeError("movsxd指令的目的操作数错误, %s" % destination)
+
+        else:
+            raise RuntimeError("movsxd指令的参数量错误，共有%d个参数" % len(segment))
+
     # mov指令 mov dest src
     # 将ops的数据传给opd
     elif segment[0] == "mov":
