@@ -36,14 +36,8 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-struct{
-int a;
-int b;
-}x;
 int main(){
-x.a =1;
-x.b = 2;
-return x.a;
+return "123";
 }
 """
 
