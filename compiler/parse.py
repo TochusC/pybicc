@@ -2,6 +2,11 @@ from enum import Enum
 
 from compiler import tokenize, type
 
+class TagScope:
+    next = None
+    name = None
+    ty = None
+
 
 class NodeKind(Enum):
     ND_ADD = 1
@@ -245,10 +250,16 @@ def struct_decl():
     offset = 0
     mem = ty.members
     while mem is not None:
+        offset = type.align_to(offset, mem.ty.align)
         mem.offset = offset
         offset += mem.ty.size
+
+        if ty.align < mem.ty.align:
+            ty.align = mem.ty.align
+
         mem = mem.next
-    ty.size = offset
+
+    ty.size = type.align_to(offset, ty.align)
 
     return ty
 

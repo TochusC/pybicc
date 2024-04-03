@@ -36,17 +36,15 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-int fun(int x){
-return x;
-}
+struct{
+int a;
+int b;
+}x;
 int main(){
-int ans =0;
-while (ans < 10){
- ans = ans + 1;
- }
- return ans;
+x.a =1;
+x.b = 2;
+return x.a;
 }
-
 """
 
 DEBUG = True
@@ -74,6 +72,8 @@ if __name__ == '__main__':
         offset = 0
         vl = fn.locals
         while vl is not None:
+            var = vl.var
+            offset = utils.align_to(offset, var.ty.align)
             offset += vl.var.ty.size
             vl.var.offset = offset
             vl = vl.next
@@ -111,12 +111,12 @@ if __name__ == '__main__':
 
     # 编译成汇编代码
     print("======编译开始======")
-    try:
-        code = codegen.codegen(parse.prog)
-    except Exception as e:
-        print("编译错误：", e)
-        print(codegen.code)
-        exit(1)
+    # try:
+    code = codegen.codegen(parse.prog)
+    # except Exception as e:
+    #     print("编译错误：", e)
+    #     print(codegen.code)
+    #     exit(1)
     if DEBUG:
         # 输出汇编代码，用于调试
         print("======编译结果======")

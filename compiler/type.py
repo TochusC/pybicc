@@ -26,15 +26,16 @@ class Type:
     array_len = None
     members = None
 
-    def __init__(self, kind=None, size=None, base=None, array_len=None):
+    def __init__(self, kind=None, size=None, base=None, array_len=None, align=0):
         self.kind = kind
         self.size = size
         self.base = base
+        self.align = align
         self.array_len = array_len
 
 
-char_type = Type(kind=TypeKind.TY_CHAR, size=1)
-int_type = Type(kind=TypeKind.TY_INT, size=8)
+char_type = Type(kind=TypeKind.TY_CHAR, size=1, align=1)
+int_type = Type(kind=TypeKind.TY_INT, size=8, align=8)
 
 
 def is_integer(ty):
@@ -53,11 +54,18 @@ def align_to(n, align):
     return (n + align - 1) & ~(align - 1)
 
 
-def pointer_to(base):
+def align_to(n, align):
+    return (n + align - 1) & ~(align - 1)
+
+def new_type(kind, size, align):
     ty = Type()
-    ty.kind = TypeKind.TY_PTR
-    ty.size = 8
-    ty.base = base
+    ty.kind = kind
+    ty.size = size
+    ty.align = align
+    return ty
+
+def pointer_to(base):
+    ty = new_type(TypeKind.TY_PTR, 8, 8)
     return ty
 
 
@@ -107,6 +115,9 @@ def add_type(node):
     elif node.kind == parse.NodeKind.ND_VAR:
         node.ty = node.var.ty
         return
+    elif node.kind == parse.NodeKind.ND_MEMBER:
+        node.ty = node.member.ty
+        return
     elif node.kind == parse.NodeKind.ND_ADDR:
         if node.lhs.ty.kind == TypeKind.TY_ARRAY:
             node.ty = pointer_to(node.lhs.ty.base)
@@ -121,9 +132,7 @@ def add_type(node):
 
 
 def array_of(base, length):
-    ty = Type
-    ty.kind = TypeKind.TY_ARRAY
-    ty.size = base.size * length
+    ty = new_type(TypeKind.TY_ARRAY, base.size * length, base.align)
     ty.base = base
     ty.array_len = length
     return ty
