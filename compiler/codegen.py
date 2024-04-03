@@ -64,6 +64,11 @@ def load(ty):
 def store(ty):
     global code
 
+    if ty.kind == type.TypeKind.TY_BOOL:
+        code += "  cmp rdi, 0\n"
+        code += "  setne dil\n"
+        code += "  movzb rdi, dil\n"
+
     if ty.size == 1:
         code += "  pop dil\n"
         code += "  pop rax\n"
@@ -86,7 +91,6 @@ def store(ty):
         code += "  push rdi\n"
 
 
-
 def gen(node):
     global code, labelseq
 
@@ -101,7 +105,7 @@ def gen(node):
         gen(node.lhs)
         code += "  add rsp, 8\n"
         return code
-    elif node.kind == parse.NodeKind.ND_VAR\
+    elif node.kind == parse.NodeKind.ND_VAR \
             or node.kind == parse.NodeKind.ND_MEMBER:
         gen_addr(node)
         if node.ty.kind != type.TypeKind.TY_ARRAY:
@@ -288,7 +292,6 @@ def load_arg(var, idx):
         code += f"  mov [rbp-{var.offset}], {argreg4[idx]}\n"
     elif sz == 8:
         code += f"  mov [rbp-{var.offset}], {argreg8[idx]}\n"
-
 
 
 def emit_text(prog):

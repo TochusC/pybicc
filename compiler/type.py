@@ -12,6 +12,7 @@ class TypeKind(Enum):
     TY_LONG = 7
     TY_FUNC = 8
     TY_VOID = 9
+    TY_BOOL = 10
 
 
 class Member:
@@ -40,6 +41,7 @@ class Type:
 
 
 void_type = Type(kind=TypeKind.TY_VOID, size=1, align=1)
+bool_type = Type(kind=TypeKind.TY_BOOL, size=1, align=1)
 char_type = Type(kind=TypeKind.TY_CHAR, size=1, align=1)
 int_type = Type(kind=TypeKind.TY_INT, size=4, align=4)
 short_type = Type(kind=TypeKind.TY_SHORT, size=2, align=2)
@@ -47,7 +49,8 @@ long_type = Type(kind=TypeKind.TY_LONG, size=8, align=8)
 
 def is_integer(ty):
     kd = ty.kind
-    return kd in [TypeKind.TY_INT, TypeKind.TY_CHAR, TypeKind.TY_SHORT, TypeKind.TY_LONG]
+    return kd in [TypeKind.TY_INT, TypeKind.TY_CHAR, TypeKind.TY_BOOL,
+                  TypeKind.TY_SHORT, TypeKind.TY_LONG]
 
 def align_to(n, align):
     """

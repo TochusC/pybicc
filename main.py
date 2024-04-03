@@ -36,17 +36,12 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-int foo();
-void lazy(){
-int nothing = 1;
-}
+
 int main(){
-return foo();
+bool x= 1;
+return x;
 }
-int foo(){
-lazy();
-return 3;
-}
+
 """
 
 DEBUG = True

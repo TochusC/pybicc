@@ -421,12 +421,14 @@ def program():
 
 
 # basetype = builtin-type | struct-decl | typedef-name
-# builtin-type = "void" | "char" | "short" | "int" | "long"
+# builtin-type = "void" | "_Bool" | "char" | "short" | "int" | "long"
 def basetype():
     if not is_typename():
         raise RuntimeError("typename expected, but got %s", tokenize.token.str)
     if tokenize.consume('void'):
         ty = type.void_type
+    elif tokenize.consume('bool'):
+        ty = type.bool_type
     elif tokenize.consume('char'):
         ty = type.char_type
     elif tokenize.consume('short'):
@@ -509,6 +511,7 @@ def is_typename():
             or tokenize.peek("short")
             or tokenize.peek("long")
             or tokenize.peek("void")
+            or tokenize.peek("bool")
             or find_typedef(tokenize.token))
 
 
