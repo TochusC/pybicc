@@ -14,7 +14,7 @@ def ispunct(c):
 
 keywords = ["return", "if", "else", "while", "for",
             "int", "sizeof", "char", "struct", "typedef",]
-ops = ["==", "!=", "<=", ">="]
+ops = ["==", "!=", "<=", ">=", "->"]
 
 
 class TokenKind(Enum):

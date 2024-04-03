@@ -676,7 +676,7 @@ def struct_ref(lhs):
     return node
 
 
-# postfix = primary ("[" expr "]" | "." ident)*
+# postfix = primary ("[" expr "]" | "." ident | "->" ident)*
 def postfix():
     node = primary()
 
@@ -687,6 +687,10 @@ def postfix():
             node = new_unary(NodeKind.ND_DEREF, exp)
             continue
         elif tokenize.consume('.'):
+            node = struct_ref(node)
+            continue
+        elif tokenize.consume('->'):
+            node = new_unary(NodeKind.ND_DEREF, node)
             node = struct_ref(node)
             continue
         return node
