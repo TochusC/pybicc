@@ -15,6 +15,9 @@ class VarScope:
     var = None
     typedef = None
 
+    enum_ty = None
+    enum_val = None
+
 
 class Scope:
     var_scope = VarScope()
@@ -248,6 +251,7 @@ def find_typedef(tok):
             return sc.typedef
     return None
 
+
 def new_node(kind, tok=tokenize.token):
     return Node(kind, tok=tok)
 
@@ -302,8 +306,6 @@ def push_tag_scope(tok, ty):
 # struct-decl = "struct" ident
 #             | "struct" ident? "{" struct-member "}"
 def struct_decl():
-    tokenize.expect("struct")
-
     tag = tokenize.consume_ident()
 
     if tag is not None and not tokenize.peek("{"):
@@ -397,7 +399,7 @@ def is_function():
     return isfunc
 
 
-# program = (global-var | function)*
+# program = (typedef | global-var | function)*
 def program():
     global globals
     head = Function()
@@ -407,6 +409,16 @@ def program():
     while True:
         if tokenize.at_eof():
             break
+        if tokenize.consume('typedef'):
+            ty = basetype()
+            ty = read_type_suffix(ty)
+            name = tokenize.expect_ident()
+
+            push_scope(name)
+            var_scope.typedef = ty
+
+            tokenize.expect(';')
+
         if is_function():
             fn = function()
             if fn is not None:
@@ -422,7 +434,7 @@ def program():
     return prog
 
 
-# basetype = builtin-type | struct-decl | typedef-name
+# basetype = builtin-type | struct-decl | typedef-name | enum-specifier
 # builtin-type = "void" | "_Bool" | "char" | "short" | "int" | "long"
 def basetype():
     if not is_typename():
@@ -439,10 +451,14 @@ def basetype():
         ty = type.int_type
     elif tokenize.consume('long'):
         tokenize.consume('long')
-
         ty = type.long_type
-    else:
+    elif tokenize.consume('struct'):
         ty = struct_decl()
+    else:
+        ty = find_var(tokenize.consume_ident())
+        ty = ty.typedef
+    if ty is None:
+        raise RuntimeError("unknown type name", tokenize.token)
 
     while tokenize.consume('*'):
         ty = type.pointer_to(ty)
@@ -698,6 +714,7 @@ def mul():
             node = new_binary(NodeKind.ND_DIV, node, cast(), tok=tokenize.token)
         else:
             return node
+
 
 # cast = "(" type-name ")" cast | unary
 def cast():

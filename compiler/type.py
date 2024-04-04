@@ -13,6 +13,7 @@ class TypeKind(Enum):
     TY_FUNC = 8
     TY_VOID = 9
     TY_BOOL = 10
+    TY_ENUM = 11
 
 
 class Member:
@@ -51,6 +52,10 @@ def is_integer(ty):
     kd = ty.kind
     return kd in [TypeKind.TY_INT, TypeKind.TY_CHAR, TypeKind.TY_BOOL,
                   TypeKind.TY_SHORT, TypeKind.TY_LONG]
+
+def enum_type():
+    ty = new_type(TypeKind.TY_ENUM, 4, 4)
+    return ty
 
 def align_to(n, align):
     """
