@@ -346,6 +346,32 @@ def struct_decl():
         push_tag_scope(tag, ty)
     return ty
 
+def enum_specifier():
+    ty = type.enum_type()
+    tag = tokenize.consume_ident()
+    if tag is not None and not tokenize.peek("{"):
+        sc = find_tag(tag)
+        if sc is None:
+            raise RuntimeError("unknown enum type", tokenize.token)
+        if sc.ty.kind != type.TypeKind.TY_ENUM:
+            raise RuntimeError("not an enum type", tokenize.token)
+        return sc.ty
+    tokenize.expect("{")
+    cnt = 0
+    while not tokenize.consume("}"):
+        name = tokenize.expect_ident()
+        if tokenize.consume("="):
+            cnt = tokenize.expect_number()
+        sc = push_scope(name)
+        sc.enum_ty = ty
+        sc.enum_val = cnt
+        cnt += 1
+        if not tokenize.consume(","):
+            tokenize.expect("}")
+            break
+    if tag is not None:
+        push_tag_scope(tag, ty)
+    return ty
 
 def struct_member():
     mem = type.Member()
@@ -454,6 +480,8 @@ def basetype():
         ty = type.long_type
     elif tokenize.consume('struct'):
         ty = struct_decl()
+    elif tokenize.consume('enum'):
+        ty = enum_specifier()
     else:
         ty = find_var(tokenize.consume_ident())
         ty = ty.typedef
@@ -532,6 +560,7 @@ def is_typename():
             or tokenize.peek("long")
             or tokenize.peek("void")
             or tokenize.peek("bool")
+            or tokenize.peek("enum")
             or find_typedef(tokenize.token))
 
 
@@ -832,10 +861,14 @@ def primary():
 
         # 变量
         sc = find_var(ident)
-        if sc is not None and sc.var is not None:
-            return new_var_node(sc.var)
+        if sc is not None:
+            if sc.var is not None:
+                return new_var_node(sc.var, tok=ident)
+            elif sc.enum_ty is not None:
+                return new_num(sc.enum_val, tok=ident)
         else:
             raise RuntimeError("undefined variable: %s", ident.str)
+
 
     tok = tokenize.token
     if tok.kind == tokenize.TokenKind.TK_STR:

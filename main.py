@@ -36,15 +36,11 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-typedef struct{
-    int x;
-    int y;
-} Point;
+typedef enum {INT, CHAR} TypeKind;
 
 int main(){
-Point p;
-p.x = 1;
-return p.x;
+TypeKind a = CHAR;
+return CHAR;
 }
 
 """
