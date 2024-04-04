@@ -133,6 +133,9 @@ def add_type(node):
     elif node.kind == parse.NodeKind.ND_VAR:
         node.ty = node.var.ty
         return
+    elif node.kind == parse.NodeKind.ND_COMMA:
+        node.ty = node.rhs.ty
+        return
     elif node.kind == parse.NodeKind.ND_MEMBER:
         node.ty = node.member.ty
         return

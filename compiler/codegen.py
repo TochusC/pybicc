@@ -135,6 +135,10 @@ def gen(node):
         gen(node.rhs)
         store(node.ty)
         return code
+    elif node.kind == parse.NodeKind.ND_COMMA:
+        gen(node.lhs)
+        gen(node.rhs)
+        return code
     elif node.kind == parse.NodeKind.ND_ADDR:
         gen_addr(node.lhs)
         return code

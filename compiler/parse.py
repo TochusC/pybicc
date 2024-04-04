@@ -55,7 +55,8 @@ class NodeKind(Enum):
     ND_NULL = 25  # 空
     ND_MEMBER = 26  # 结构体成员
 
-    ND_CAST = 27
+    ND_CAST = 27    # 类型转换
+    ND_COMMA = 28   # 逗号表达式
 
 
 class Var:
@@ -661,9 +662,13 @@ def stmt2():
     return node
 
 
-# expr = assign
+# expr = assign ("," assign)*
 def expr():
-    return assign()
+    node = assign()
+    while tokenize.consume(","):
+        node = new_unary(NodeKind.ND_EXPR_STMT, node)
+        node = new_binary(NodeKind.ND_COMMA, node, assign())
+    return node
 
 
 # assign = equality ("=" assign)?
