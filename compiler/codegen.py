@@ -324,7 +324,8 @@ def emit_text(prog):
 
     fn = prog.fns
     while fn is not None:
-        code += f".global {fn.name}\n"
+        if not fn.is_static:
+            code += f".global {fn.name}\n"
         code += f"{fn.name}:\n"
         funcname = fn.name
 

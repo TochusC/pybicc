@@ -37,10 +37,12 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
 typedef enum {INT, CHAR} TypeKind;
-
+void hello(){
+return 1;
+}
 int main(){
 TypeKind a = CHAR;
-return CHAR;
+return hello();
 }
 
 """

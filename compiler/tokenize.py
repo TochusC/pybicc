@@ -14,7 +14,7 @@ def ispunct(c):
 
 keywords = ["return", "if", "else", "while", "for",
             "int", "short", "long", "void", "char", "bool",
-            "enum", "sizeof", "struct", "typedef",]
+            "enum", "sizeof", "struct", "typedef", "static"]
 ops = ["==", "!=", "<=", ">=", "->"]
 
 
@@ -46,10 +46,6 @@ def consume(op):
     global token
     if token is None:
         return None
-    # # 测试用
-    # print("Got Token: ", token.kind, token.str)
-    # print("Expected: ", TokenKind.TK_RESERVED, op)
-    # print()
 
     if token.kind != TokenKind.TK_RESERVED or token.str != op:
         return None

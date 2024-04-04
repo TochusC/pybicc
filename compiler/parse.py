@@ -88,6 +88,7 @@ class Function:
     params = None
     # 局部变量
     locals = None
+    is_static = False
 
     def __init__(self, next=None, name=None, node=None,
                  locals=None, stack_size=None):
@@ -419,6 +420,7 @@ def global_var():
 # 决定最外层的是函数还是全局变量。
 def is_function():
     tok = tokenize.token
+    tokenize.consume('static')
     basetype()
     isfunc = tokenize.consume_ident() and tokenize.consume('(')
     tokenize.token = tok
@@ -493,7 +495,7 @@ def basetype():
     return ty
 
 
-# function = basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
+# function = static? basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
 # params   = param ("," param)*
 # param    = basetype ident
 def function():
@@ -501,8 +503,11 @@ def function():
 
     locals = None
 
+    is_static = tokenize.consume('static')
+
     ty = basetype()
     fn = Function(name=tokenize.expect_ident())
+    fn.is_static = is_static
 
     new_gvar(fn.name, type.func_type(ty), False)
 

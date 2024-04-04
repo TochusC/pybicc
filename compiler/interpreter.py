@@ -336,19 +336,22 @@ def run(code):
             elif command_segment[0] == '.text':
                 pass
             elif command_segment[0] == '.global':
-                current_func = Func()
-                glb_func[command_segment[1]] = current_func
+                pass
+
+        elif command_line[-1] == ':':
+            current_func = Func()
+            glb_func[command_line[:-1]] = current_func
+            current_func.entry = command_line_index
+            while command_line_index < len(assembly_commands):
+                command_line = assembly_commands[command_line_index]
+                command = command_line.strip()
+                if command[0:2] == '.L':
+                    current_func.labels[command[:-1]] = command_line_index + 1
+                elif command[0:3] == 'ret':
+                    current_func.ret = command_line_index
+                    break
                 command_line_index += 1
-                current_func.entry = command_line_index
-                while command_line_index < len(assembly_commands):
-                    command_line = assembly_commands[command_line_index]
-                    command = command_line.strip()
-                    if command[0:2] == '.L':
-                        current_func.labels[command[:-1]] = command_line_index + 1
-                    elif command[0:3] == 'ret':
-                        current_func.ret = command_line_index
-                        break
-                    command_line_index += 1
+
 
     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
     while RUNNING_COMMAND_LINE_INDEX < len(assembly_commands):
