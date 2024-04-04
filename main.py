@@ -38,7 +38,7 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 codeToCompile = """
 
 int main(){
-bool x= 1;
+int x = 10;
 return x;
 }
 

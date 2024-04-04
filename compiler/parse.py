@@ -52,6 +52,8 @@ class NodeKind(Enum):
     ND_NULL = 25  # 空
     ND_MEMBER = 26  # 结构体成员
 
+    ND_CAST = 27
+
 
 class Var:
     name = None  # 函数名
@@ -436,6 +438,8 @@ def basetype():
     elif tokenize.consume('int'):
         ty = type.int_type
     elif tokenize.consume('long'):
+        tokenize.consume('long')
+
         ty = type.long_type
     else:
         ty = struct_decl()
@@ -684,16 +688,31 @@ def add():
             return node
 
 
-# mul = unary ("*" unary | "/" unary)*
+# mul = cast ("*" cast | "/" cast)*
 def mul():
     node = unary()
     while True:
         if tokenize.consume("*"):
-            node = new_binary(NodeKind.ND_MUL, node, unary(), tok=tokenize.token)
+            node = new_binary(NodeKind.ND_MUL, node, cast(), tok=tokenize.token)
         elif tokenize.consume("/"):
-            node = new_binary(NodeKind.ND_DIV, node, unary(), tok=tokenize.token)
+            node = new_binary(NodeKind.ND_DIV, node, cast(), tok=tokenize.token)
         else:
             return node
+
+# cast = "(" type-name ")" cast | unary
+def cast():
+    tok = tokenize.token
+
+    if tokenize.consume('('):
+        if is_typename():
+            ty = basetype()
+            tokenize.expect(')')
+            node = new_unary(NodeKind.ND_CAST, cast())
+            type.add_type(node.lhs)
+            node.ty = ty
+            return node
+        tokenize.token = tok
+    return unary()
 
 
 # unary = ("+" | "-" | "*" | "&")? unary

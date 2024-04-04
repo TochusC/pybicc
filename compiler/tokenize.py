@@ -153,6 +153,24 @@ def get_escape_char(c):
         return 0
     return c
 
+def read_char_literal(raw, start):
+    p = start
+    q = p + 1
+    if raw[q] == "'" or raw[q] == "\0":
+        raise RuntimeError("empty char literal")
+
+    c = ''
+    if raw[q] == "\\":
+        q += 1
+        c = get_escape_char(raw[q])
+    else:
+        c = raw[q]
+
+    if raw[q] != "'":
+        raise RuntimeError("char literal too long")
+
+    tok = Token(TokenKind.TK_NUM, ord(c), None)
+    return tok, q + 1
 
 def read_string_literal(raw, start):
     p = start
@@ -210,6 +228,11 @@ def tokenize(raw):
             p += cur.cont_len + 2
             continue
 
+        if raw[p] == "'":
+            cur.next, p = read_char_literal(raw, p)
+            cur = cur.next
+            continue
+
         # 关键字
         reserved, p = starts_with_reserved(p, raw)
         if reserved is not None:
@@ -234,7 +257,7 @@ def tokenize(raw):
             p += 1
             continue
 
-        # 字面值常量
+        # 数字
         if raw[p].isdigit():
             cur.next = Token(TokenKind.TK_NUM, raw[p], None)
             cur = cur.next

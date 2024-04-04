@@ -91,6 +91,25 @@ def store(ty):
         code += "  push rdi\n"
 
 
+def truncate(ty):
+    global code
+    code += "  pop rax\n"
+
+    if ty.kind is type.TypeKind.TY_BOOL:
+        code += "  cmp rax, 0\n"
+        code += "  setne al\n"
+
+    if ty.size == 1:
+        code += "  movsx rax, al\n"
+    elif ty.size == 2:
+        code += "  movsx rax, ax\n"
+    elif ty.size == 4:
+        code += "  movsxd rax, eax\n"
+
+    code += "  push rax\n"
+
+
+
 def gen(node):
     global code, labelseq
 
@@ -212,6 +231,10 @@ def gen(node):
         gen(node.lhs)
         code += "  pop rax\n"
         code += f"  jmp .L.return.{funcname}\n"
+        return code
+    elif node.kind is parse.NodeKind.ND_CAST:
+        gen(node.lhs)
+        truncate(node.ty)
         return code
 
     gen(node.lhs)
