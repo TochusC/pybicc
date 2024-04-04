@@ -42,7 +42,7 @@ return 1;
 }
 int main(){
 TypeKind a = CHAR;
-return hello();
+return 0x11;
 }
 
 """

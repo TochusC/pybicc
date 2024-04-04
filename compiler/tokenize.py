@@ -125,6 +125,29 @@ def starts_with_reserved(p, raw):
             return op, p + len(op)
     return None, p
 
+def read_int_literal(raw, start):
+    p = start
+    base = None
+    if raw[p:p+2] == "0x":
+        p += 2
+        base = 16
+    elif raw[p:p+2] == "0b":
+        p += 2
+        base = 2
+    elif raw[p] == "0":
+        base = 8
+    else:
+        base = 10
+
+    while p < len(raw) and raw[p].isdigit():
+        p += 1
+
+    val = int(raw[start:p], base)
+
+    tok = Token(TokenKind.TK_NUM, val, None)
+    tok.val = val
+    return tok, p
+
 
 def get_escape_char(c):
     if c == 'a':
@@ -255,12 +278,8 @@ def tokenize(raw):
 
         # 数字
         if raw[p].isdigit():
-            cur.next = Token(TokenKind.TK_NUM, raw[p], None)
+            cur.next, p = read_int_literal(raw, p)
             cur = cur.next
-            p += 1
-            while p < len(raw) and raw[p].isdigit():
-                cur.str += raw[p]
-                p += 1
             continue
 
         raise RuntimeError("invalid token: %s" % raw[p])
