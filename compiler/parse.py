@@ -578,7 +578,7 @@ def stmt():
 # stmt2 = "return" expr ";"
 #      | "if" "(" expr ")" stmt ("else" stmt)?
 #      | "while" "(" expr ")" stmt
-#      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
+#      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 #      | "{" stmt* "}"
 #      | "typedef" basetype ident ("[" num "]")* ";"
 #      | declaration
@@ -609,10 +609,15 @@ def stmt2():
 
     if tokenize.consume("for"):
         node = new_node(NodeKind.ND_FOR)
+
         tokenize.expect("(")
+        sc = enter_scope()
         if not tokenize.consume(";"):
-            node.init = read_expr_stmt()
-            tokenize.expect(";")
+            if is_typename():
+                node.init = declaration()
+            else:
+                node.init = read_expr_stmt()
+                tokenize.expect(";")
         if not tokenize.consume(";"):
             node.cond = expr()
             tokenize.expect(";")
@@ -620,6 +625,8 @@ def stmt2():
             node.inc = read_expr_stmt()
             tokenize.expect(")")
         node.then = stmt()
+
+        leave_scope(sc)
         return node
 
     if tokenize.consume("{"):
