@@ -127,6 +127,16 @@ def add_type(node):
         parse.NodeKind.ND_PTR_ADD,
         parse.NodeKind.ND_PTR_SUB,
         parse.NodeKind.ND_ASSIGN,
+        parse.NodeKind.ND_PRE_INC,
+        parse.NodeKind.ND_PRE_DEC,
+        parse.NodeKind.ND_POST_INC,
+        parse.NodeKind.ND_POST_DEC,
+        parse.NodeKind.ND_ADD_EQ,
+        parse.NodeKind.ND_SUB_EQ,
+        parse.NodeKind.ND_PTR_ADD_EQ,
+        parse.NodeKind.ND_PTR_SUB_EQ,
+        parse.NodeKind.ND_MUL_EQ,
+        parse.NodeKind.ND_DIV_EQ,
     ]:
         node.ty = node.lhs.ty
         return

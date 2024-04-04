@@ -108,6 +108,65 @@ def truncate(ty):
 
     code += "  push rax\n"
 
+def inc(ty):
+    global code
+    code += "  pop rax\n"
+    if ty.base is None:
+        code += "  add rax, 1\n"
+    else:
+        code += f"  add rax, {ty.base.size}\n"
+    code += "  push rax\n"
+
+def dec(ty):
+    global code
+    code += "  pop rax\n"
+    if ty.base is None:
+        code += "  sub rax, 1\n"
+    else:
+        code += f"  sub rax, {ty.base.size}\n"
+    code += "  push rax\n"
+
+def gen_binary(node):
+    code += "  pop rdi\n"
+    code += "  pop rax\n"
+
+    if node.kind in [parse.NodeKind.ND_ADD, parse.NodeKind.ND_ADD_EQ]:
+        code += "  add rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_SUB, parse.NodeKind.ND_SUB_EQ]:
+        code += "  sub rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_PTR_ADD, parse.NodeKind.ND_PTR_ADD_EQ]:
+        code += f"  imul rdi, { node.ty.base.size }\n"
+        code += "  add rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_PTR_SUB, parse.NodeKind.ND_PTR_SUB_EQ]:
+        code += f"  imul rdi, { node.ty.base.size }\n"
+        code += "  sub rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_PTR_DIFF]:
+        code += "  sub rax, rdi\n"
+        code += "  cqo\n"
+        code += f"  mov rdi, { node.ty.base.size }\n"
+        code += "  idiv rdi\n"
+    elif node.kind in [parse.NodeKind.ND_MUL, parse.NodeKind.ND_MUL_EQ]:
+        code += "  imul rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_DIV, parse.NodeKind.ND_DIV_EQ]:
+        code += "  cqo\n"
+        code += "  idiv rdi\n"
+    elif node.kind in [parse.NodeKind.ND_EQ]:
+        code += "  cmp rax, rdi\n"
+        code += "  sete al\n"
+        code += "  movzb rax, al\n"
+    elif node.kind in [parse.NodeKind.ND_NE]:
+        code += "  cmp rax, rdi\n"
+        code += "  setne al\n"
+        code += "  movzb rax, al\n"
+    elif node.kind in [parse.NodeKind.ND_LT]:
+        code += "  cmp rax, rdi\n"
+        code += "  setl al\n"
+        code += "  movzb rax, al\n"
+    elif node.kind in [parse.NodeKind.ND_LE]:
+        code += "  cmp rax, rdi\n"
+        code += "  setle al\n"
+        code += "  movzb rax, al\n"
+    code += "  push rax\n"
 
 
 def gen(node):
@@ -134,6 +193,36 @@ def gen(node):
         gen_lval(node.lhs)
         gen(node.rhs)
         store(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_PRE_INC:
+        gen_lval(node.lhs)
+        code += "  push [rsp]\n"
+        load(node.ty)
+        inc(node.ty)
+        store(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_PRE_DEC:
+        gen_lval(node.lhs)
+        code += "  push [rsp]\n"
+        load(node.ty)
+        dec(node.ty)
+        store(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_POST_INC:
+        gen_lval(node.lhs)
+        code += "  push [rsp]\n"
+        load(node.ty)
+        inc(node.ty)
+        store(node.ty)
+        dec(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_POST_DEC:
+        gen_lval(node.lhs)
+        code += "  push [rsp]\n"
+        load(node.ty)
+        dec(node.ty)
+        store(node.ty)
+        inc(node.ty)
         return code
     elif node.kind == parse.NodeKind.ND_COMMA:
         gen(node.lhs)
@@ -243,48 +332,8 @@ def gen(node):
 
     gen(node.lhs)
     gen(node.rhs)
+    gen_binary(node)
 
-    code += "  pop rdi\n"
-    code += "  pop rax\n"
-
-    if node.kind == parse.NodeKind.ND_ADD:
-        code += "  add rax, rdi\n"
-    elif node.kind == parse.NodeKind.ND_PTR_ADD:
-        code += f"  imul rdi, {node.ty.base.size}\n"
-        code += "  add rax, rdi\n"
-    elif node.kind == parse.NodeKind.ND_SUB:
-        code += "sub rax, rdi\n"
-    elif node.kind == parse.NodeKind.ND_PTR_SUB:
-        code += f"  imul rdi, {node.ty.base.size}\n"
-        code += "  sub rax, rdi\n"
-    elif node.kind == parse.NodeKind.ND_PTR_DIFF:
-        code += "  sub rax, rdi\n"
-        code += "  cqo\n"
-        code += f"  mov rdi, {node.ty.base.size}\n"
-        code += "  idiv rdi\n"
-    elif node.kind == parse.NodeKind.ND_MUL:
-        code += "  imul rax, rdi\n"
-    elif node.kind == parse.NodeKind.ND_DIV:
-        code += "  cqo\n"
-        code += "  idiv rdi\n"
-    elif node.kind == parse.NodeKind.ND_EQ:
-        code += "  cmp rax, rdi\n"
-        code += "  sete al\n"
-        code += "  movzb rax, al\n"
-    elif node.kind == parse.NodeKind.ND_NE:
-        code += "  cmp rax, rdi\n"
-        code += "  setne al\n"
-        code += "  movzb rax, al\n"
-    elif node.kind == parse.NodeKind.ND_LT:
-        code += "  cmp rax, rdi\n"
-        code += "  setl al\n"
-        code += "  movzb rax, al\n"
-    elif node.kind == parse.NodeKind.ND_LE:
-        code += "  cmp rax, rdi\n"
-        code += "  setle al\n"
-        code += "  movzb rax, al\n"
-
-    code += "  push rax\n"
     return code
 
 

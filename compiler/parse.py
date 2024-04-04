@@ -58,6 +58,17 @@ class NodeKind(Enum):
     ND_CAST = 27    # 类型转换
     ND_COMMA = 28   # 逗号表达式
 
+    ND_PRE_INC = 29  # 前置++
+    ND_PRE_DEC = 30  # 前置--
+    ND_POST_INC = 31  # 后置++
+    ND_POST_DEC = 32  # 后置--
+    ND_ADD_EQ = 33  # +=
+    ND_SUB_EQ = 34  # -=
+    ND_MUL_EQ = 35  # *=
+    ND_DIV_EQ = 36  # /=
+    ND_PTR_ADD_EQ = 37  # +=
+    ND_PTR_SUB_EQ = 38  # -=
+
 
 class Var:
     name = None  # 函数名
@@ -252,6 +263,8 @@ def find_typedef(tok):
         if sc is not None:
             return sc.typedef
     return None
+
+
 
 
 def new_node(kind, tok=tokenize.token):
@@ -671,13 +684,28 @@ def expr():
     return node
 
 
-# assign = equality ("=" assign)?
+# assign    = equality (assign-op assign)?
+# assign-op = "=" | "+=" | "-=" | "*=" | "/="
 def assign():
     node = equality()
     if tokenize.consume("="):
-        node = new_binary(NodeKind.ND_ASSIGN, node, assign(), tok=tokenize.token)
-    return node
+        return new_binary(NodeKind.ND_ASSIGN, node, assign(), tok=tokenize.token)
+    if tokenize.consume("*="):
+        return new_binary(NodeKind.ND_MUL_EQ, node, assign(), tok=tokenize.token)
+    if tokenize.consume("/="):
+        return new_binary(NodeKind.ND_DIV_EQ, node, assign(), tok=tokenize.token)
 
+    if tokenize.consume("+="):
+        type.add_type(node)
+        if node.ty.base is not None:
+            return new_binary(NodeKind.ND_PTR_ADD_EQ, node, assign(), tok=tokenize.token)
+        return new_binary(NodeKind.ND_ADD_EQ, node, assign(), tok=tokenize.token)
+    if tokenize.consume("-="):
+        type.add_type(node)
+        if node.ty.base is not None:
+            return new_binary(NodeKind.ND_PTR_SUB_EQ, node, assign(), tok=tokenize.token)
+        return new_binary(NodeKind.ND_SUB_EQ, node, assign(), tok=tokenize.token)
+    return node
 
 # equality = relational ("==" relational | "!=" relational)*
 def equality():
@@ -779,6 +807,7 @@ def cast():
 
 
 # unary = ("+" | "-" | "*" | "&")? unary
+#       | ("++" | "--") unary
 #       | postfix
 def unary():
     if tokenize.consume("+"):
@@ -791,6 +820,10 @@ def unary():
         return new_unary(NodeKind.ND_ADDR, unary())
     if tokenize.consume("*"):
         return new_unary(NodeKind.ND_DEREF, unary())
+    if tokenize.consume("++"):
+        return new_unary(NodeKind.ND_PRE_INC, unary())
+    if tokenize.consume("--"):
+        return new_unary(NodeKind.ND_PRE_DEC, unary())
 
     return postfix()
 
@@ -818,7 +851,7 @@ def struct_ref(lhs):
     return node
 
 
-# postfix = primary ("[" expr "]" | "." ident | "->" ident)*
+# postfix = primary ("[" expr "]" | "." ident | "->" ident | "++" | "--")*
 def postfix():
     node = primary()
 
@@ -834,6 +867,12 @@ def postfix():
         elif tokenize.consume('->'):
             node = new_unary(NodeKind.ND_DEREF, node)
             node = struct_ref(node)
+            continue
+        elif tokenize.consume("++"):
+            node = new_unary(NodeKind.ND_POST_INC, node)
+            continue
+        elif tokenize.consume("--"):
+            node = new_unary(NodeKind.ND_POST_DEC, node)
             continue
         return node
 
