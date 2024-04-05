@@ -127,6 +127,7 @@ def dec(ty):
     code += "  push rax\n"
 
 def gen_binary(node):
+    global code
     code += "  pop rdi\n"
     code += "  pop rax\n"
 
@@ -150,6 +151,12 @@ def gen_binary(node):
     elif node.kind in [parse.NodeKind.ND_DIV, parse.NodeKind.ND_DIV_EQ]:
         code += "  cqo\n"
         code += "  idiv rdi\n"
+    elif node.kind in [parse.NodeKind.ND_BITAND]:
+        code += "  and rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_BITOR]:
+        code += "  or rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_BITXOR]:
+        code += "  xor rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_EQ]:
         code += "  cmp rax, rdi\n"
         code += "  sete al\n"
@@ -235,6 +242,54 @@ def gen(node):
         gen(node.lhs)
         if node.ty.kind != type.TypeKind.TY_ARRAY:
             load(node.ty)
+        return code
+    elif node.kind == parse.NodeKind.ND_NOT:
+        gen(node.lhs)
+        code += "  pop rax\n"
+        code += "  cmp rax, 0\n"
+        code += "  sete al\n"
+        code += "  movzb rax, al\n"
+        code += "  push rax\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_BITNOT:
+        gen(node.lhs)
+        code += "  pop rax\n"
+        code += "  not rax\n"
+        code += "  push rax\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_LOGAND:
+        seq = labelseq
+        labelseq += 1
+        gen(node.lhs)
+        code += "  pop rax\n"
+        code += "  cmp rax, 0\n"
+        code += f"  je .L.false.{seq}\n"
+        gen(node.rhs)
+        code += "  pop rax\n"
+        code += "  cmp rax, 0\n"
+        code += f"  je .L.false.{seq}\n"
+        code += "  push 1\n"
+        code += f"  jmp .L.end.{seq}\n"
+        code += f".L.false.{seq}:\n"
+        code += "  push 0\n"
+        code += f".L.end.{seq}:\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_LOGOR:
+        seq = labelseq
+        labelseq += 1
+        gen(node.lhs)
+        code += "  pop rax\n"
+        code += "  cmp rax, 0\n"
+        code += f"  jne .L.true.{seq}\n"
+        gen(node.rhs)
+        code += "  pop rax\n"
+        code += "  cmp rax, 0\n"
+        code += f"  jne .L.true.{seq}\n"
+        code += "  push 0\n"
+        code += f"  jmp .L.end.{seq}\n"
+        code += f".L.true.{seq}:\n"
+        code += "  push 1\n"
+        code += f".L.end.{seq}:\n"
         return code
     elif node.kind == parse.NodeKind.ND_IF:
         seq = labelseq

@@ -120,6 +120,7 @@ def add_type(node):
         parse.NodeKind.ND_LE,
         parse.NodeKind.ND_FUNCALL,
         parse.NodeKind.ND_NUM,
+        parse.NodeKind.ND_NOT,
     ]:
         node.ty = long_type
         return

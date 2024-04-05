@@ -55,8 +55,8 @@ class NodeKind(Enum):
     ND_NULL = 25  # 空
     ND_MEMBER = 26  # 结构体成员
 
-    ND_CAST = 27    # 类型转换
-    ND_COMMA = 28   # 逗号表达式
+    ND_CAST = 27  # 类型转换
+    ND_COMMA = 28  # 逗号表达式
 
     ND_PRE_INC = 29  # 前置++
     ND_PRE_DEC = 30  # 前置--
@@ -68,6 +68,15 @@ class NodeKind(Enum):
     ND_DIV_EQ = 36  # /=
     ND_PTR_ADD_EQ = 37  # +=
     ND_PTR_SUB_EQ = 38  # -=
+
+    ND_NOT = 39  # !
+
+    ND_BITNOT = 40  # ~
+    ND_BITAND = 41  # &
+    ND_BITOR = 42  # |
+    ND_BITXOR = 43  # ^
+    ND_LOGAND = 44  # &&
+    ND_LOGOR = 45  # ||
 
 
 class Var:
@@ -265,8 +274,6 @@ def find_typedef(tok):
     return None
 
 
-
-
 def new_node(kind, tok=tokenize.token):
     return Node(kind, tok=tok)
 
@@ -361,6 +368,7 @@ def struct_decl():
         push_tag_scope(tag, ty)
     return ty
 
+
 def enum_specifier():
     ty = type.enum_type()
     tag = tokenize.consume_ident()
@@ -388,6 +396,7 @@ def enum_specifier():
         push_tag_scope(tag, ty)
     return ty
 
+
 def struct_member():
     mem = type.Member()
     mem.ty = basetype()
@@ -400,6 +409,11 @@ def struct_member():
 def read_func_param():
     ty = basetype()
     name = tokenize.expect_ident()
+    ty = read_type_suffix(ty)
+
+    if ty.kind == type.TypeKind.TY_ARRAY:
+        ty = type.pointer_to(ty.base)
+
     vl = VarList()
     vl.var = new_lvar(name, ty)
     return vl
@@ -418,6 +432,41 @@ def read_func_params():
         cur = cur.next
 
     return head
+
+
+def logor():
+    node = logand()
+    while tokenize.consume('||'):
+        node = new_binary(NodeKind.ND_LOGOR, node, logand(), tokenize.token)
+    return node
+
+
+def logand():
+    node = bitor()
+    while tokenize.consume('&&'):
+        node = new_binary(NodeKind.ND_LOGAND, node, bitor(), tokenize.token)
+    return node
+
+
+def bitor():
+    node = bitxor()
+    while tokenize.consume('|'):
+        node = new_binary(NodeKind.ND_BITOR, node, bitxor(), tokenize.token)
+    return node
+
+
+def bitxor():
+    node = bitand()
+    while tokenize.consume('^'):
+        node = new_binary(NodeKind.ND_BITXOR, node, bitxor(), tokenize.token)
+    return node
+
+
+def bitand():
+    node = equality()
+    while tokenize.consume('&'):
+        node = new_binary(NodeKind.ND_BITAND, node, equality(), tokenize.token)
+    return node
 
 
 prog = None
@@ -684,10 +733,10 @@ def expr():
     return node
 
 
-# assign    = equality (assign-op assign)?
+# assign    = logor (assign-op assign)?
 # assign-op = "=" | "+=" | "-=" | "*=" | "/="
 def assign():
-    node = equality()
+    node = logor()
     if tokenize.consume("="):
         return new_binary(NodeKind.ND_ASSIGN, node, assign(), tok=tokenize.token)
     if tokenize.consume("*="):
@@ -706,6 +755,7 @@ def assign():
             return new_binary(NodeKind.ND_PTR_SUB_EQ, node, assign(), tok=tokenize.token)
         return new_binary(NodeKind.ND_SUB_EQ, node, assign(), tok=tokenize.token)
     return node
+
 
 # equality = relational ("==" relational | "!=" relational)*
 def equality():
@@ -806,9 +856,9 @@ def cast():
     return unary()
 
 
-# unary = ("+" | "-" | "*" | "&")? unary
-#       | ("++" | "--") unary
-#       | postfix
+# unary = ("+" | "-" | "*" | "&" | "!")? cast
+# | ("++" | "--") unary
+# | postfix
 def unary():
     if tokenize.consume("+"):
         return unary()
@@ -820,6 +870,8 @@ def unary():
         return new_unary(NodeKind.ND_ADDR, unary())
     if tokenize.consume("*"):
         return new_unary(NodeKind.ND_DEREF, unary())
+    if tokenize.consume("!"):
+        return new_unary(NodeKind.ND_NOT, unary())
     if tokenize.consume("++"):
         return new_unary(NodeKind.ND_PRE_INC, unary())
     if tokenize.consume("--"):
@@ -924,7 +976,6 @@ def primary():
                 return new_num(sc.enum_val, tok=ident)
         else:
             raise RuntimeError("undefined variable: %s", ident.str)
-
 
     tok = tokenize.token
     if tok.kind == tokenize.TokenKind.TK_STR:

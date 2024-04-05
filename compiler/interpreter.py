@@ -709,7 +709,7 @@ def run_command(command):
     # and指令，and eax ebx
     # 逻辑与运算,结果赋值给eax
     elif segment[0] == 'and' or segment[0] == 'or':
-        if segment[0] == 3:
+        if len(segment) == 3:
             op_destination = segment[1][:-1]
             addressing_mode1 = addressing(op_destination)
             destination_value = getValueByAddressing(addressing_mode1, op_destination)
@@ -761,6 +761,16 @@ def run_command(command):
                     raise RuntimeError("未找到标签: %s" % label)
         else:
             raise RuntimeError("je指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "jne":
+        if len(segment) == 2:
+            label = segment[1]
+            if register['ZF'] == 0:
+                if label in glb_func[CURRENT_FUNC].labels:
+                    RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
+                else:
+                    raise RuntimeError("未找到标签: %s" % label)
+        else:
+            raise RuntimeError("jne指令的参数量错误，共有%d个参数" % len(segment))
     elif segment[0] == "call":
         if len(segment) == 2:
             func_name = segment[1]
