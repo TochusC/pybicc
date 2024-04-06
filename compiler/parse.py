@@ -328,12 +328,27 @@ def read_expr_stmt():
     return new_unary(NodeKind.ND_EXPR_STMT, expr(), tok=tokenize.token)
 
 
-def read_type_suffix(base):
+# type-suffix = ("[" num? "]" type-suffix)?
+def type_suffix(base):
     if not tokenize.consume('['):
         return base
-    sz = tokenize.expect_number()
-    tokenize.expect(']')
-    base = read_type_suffix(base)
+
+    sz = 0
+    is_incomplete = True
+
+    if not tokenize.consume(']'):
+        sz = tokenize.expect_number()
+        is_incomplete = False
+        tokenize.expect(']')
+
+    ty = type_suffix(base)
+
+    if ty.is_incomplete:
+        raise RuntimeError("incomplete element type")
+
+    ty = type.array_of(ty, sz)
+    ty.is_incomplete = is_incomplete
+
     return type.array_of(base, sz)
 
 
@@ -347,8 +362,7 @@ def push_tag_scope(tok, ty):
     tag_scope = sc
 
 
-# struct-decl = "struct" ident
-#             | "struct" ident? "{" struct-member "}"
+# struct-decl = "struct" ident? ("{" struct-member "}")?
 def struct_decl():
     tag = tokenize.consume_ident()
 
@@ -439,7 +453,7 @@ def struct_member():
     mem = type.Member()
     mem.ty = basetype()
     mem.name = tokenize.expect_ident()
-    mem.ty = read_type_suffix(mem.ty)
+    mem.ty = type_suffix(mem.ty)
     tokenize.expect(';')
     return mem
 
@@ -447,7 +461,7 @@ def struct_member():
 def read_func_param():
     ty = basetype()
     name = tokenize.expect_ident()
-    ty = read_type_suffix(ty)
+    ty = type_suffix(ty)
 
     if ty.kind == type.TypeKind.TY_ARRAY:
         ty = type.pointer_to(ty.base)
@@ -513,7 +527,7 @@ prog = None
 def global_var():
     ty = basetype()
     name = tokenize.expect_ident()
-    ty = read_type_suffix(ty)
+    ty = type_suffix(ty)
     tokenize.expect(';')
     new_gvar(name, ty, True)
 
@@ -528,7 +542,7 @@ def is_function():
     return isfunc
 
 
-# program = (typedef | global-var | function)*
+# program = (typedef | global-var | function | struct)*
 def program():
     global globals
     head = Function()
@@ -540,7 +554,7 @@ def program():
             break
         if tokenize.consume('typedef'):
             ty = basetype()
-            ty = read_type_suffix(ty)
+            ty = type_suffix(ty)
             name = tokenize.expect_ident()
 
             push_scope(name)
@@ -553,6 +567,8 @@ def program():
             if fn is not None:
                 cur.next = fn
                 cur = cur.next
+        elif tokenize.consume('struct'):
+            struct_decl()
         else:
             global_var()
 
@@ -644,7 +660,7 @@ def declaration():
         return new_node(NodeKind.ND_NULL)
 
     name = tokenize.expect_ident()
-    ty = read_type_suffix(ty)
+    ty = type_suffix(ty)
     var = new_lvar(name, ty)
 
     if tokenize.consume(';'):
@@ -790,7 +806,7 @@ def stmt2():
     if tokenize.consume("typedef"):
         ty = basetype()
         name = tokenize.expect_ident()
-        ty = read_type_suffix(ty)
+        ty = type_suffix(ty)
         tokenize.expect(";")
         sc = push_scope(name)
         sc.typedef = ty
