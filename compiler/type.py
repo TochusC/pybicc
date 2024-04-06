@@ -24,7 +24,6 @@ class Member:
         self.next = None
 
 
-
 class Type:
     kind = None
     size = None
@@ -32,6 +31,7 @@ class Type:
     array_len = None
     members = None
     return_ty = None
+    is_incomplete = False
 
     def __init__(self, kind=None, size=None, base=None, array_len=None, align=0):
         self.kind = kind
@@ -48,14 +48,21 @@ int_type = Type(kind=TypeKind.TY_INT, size=4, align=4)
 short_type = Type(kind=TypeKind.TY_SHORT, size=2, align=2)
 long_type = Type(kind=TypeKind.TY_LONG, size=8, align=8)
 
+def struct_type():
+    ty = new_type(TypeKind.TY_STRUCT, 0, 1)
+    ty.is_incomplete = True
+    return ty
+
 def is_integer(ty):
     kd = ty.kind
     return kd in [TypeKind.TY_INT, TypeKind.TY_CHAR, TypeKind.TY_BOOL,
                   TypeKind.TY_SHORT, TypeKind.TY_LONG]
 
+
 def enum_type():
     ty = new_type(TypeKind.TY_ENUM, 4, 4)
     return ty
+
 
 def align_to(n, align):
     """
@@ -70,12 +77,14 @@ def align_to(n, align):
 def align_to(n, align):
     return (n + align - 1) & ~(align - 1)
 
+
 def new_type(kind, size, align):
     ty = Type()
     ty.kind = kind
     ty.size = size
     ty.align = align
     return ty
+
 
 def pointer_to(base):
     ty = new_type(TypeKind.TY_PTR, 8, 8)
@@ -86,6 +95,7 @@ def func_type(return_ty):
     ty = new_type(TypeKind.TY_FUNC, 1, 1)
     ty.return_ty = return_ty
     return ty
+
 
 def add_type(node):
     if node is None or node.ty is not None:

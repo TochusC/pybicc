@@ -14,6 +14,9 @@ argreg4 = ["edi", "esi", "edx", "ecx", "r8d", "r9d"]
 argreg8 = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"]
 
 labelseq = 1
+brkseq = 1
+contseq = 1
+
 funcname = None
 
 
@@ -177,7 +180,7 @@ def gen_binary(node):
 
 
 def gen(node):
-    global code, labelseq
+    global code, labelseq, brkseq, contseq
 
     if node is None:
         return code
@@ -314,19 +317,33 @@ def gen(node):
         return code
     elif node.kind == parse.NodeKind.ND_WHILE:
         seq = labelseq
+        brkseq = contseq = labelseq
         labelseq += 1
-        code += f".L.begin.{seq}:\n"
+
+        brk = brkseq
+        cont = contseq
+
+        code += f".L.continue.{cont}:\n"
         gen(node.cond)
         code += "  pop rax\n"
         code += "  cmp rax, 0\n"
-        code += f"  je .L.end.{seq}\n"
+        code += f"  je .L.break.{brk}\n"
         gen(node.then)
-        code += f"  jmp .L.begin.{seq}\n"
-        code += f".L.end.{seq}:\n"
+
+        code += f"  jmp .L.continue.{cont}\n"
+        code += f".L.break.{brk}:\n"
+
+        brkseq = brk
+        contseq = cont
         return code
     elif node.kind == parse.NodeKind.ND_FOR:
         seq = labelseq
+        brkseq = contseq = labelseq
         labelseq += 1
+
+        brk = brkseq
+        cont = contseq
+
         if node.init:
             gen(node.init)
         code += f".L.begin.{seq}:\n"
@@ -334,18 +351,79 @@ def gen(node):
             gen(node.cond)
             code += "  pop rax\n"
             code += "  cmp rax, 0\n"
-            code += f"  je .L.end.{seq}\n"
+            code += f"  je .L.break.{brk}\n"
         gen(node.then)
+        code += f".L.continue.{cont}:\n"
         if node.inc:
             gen(node.inc)
         code += f"  jmp .L.begin.{seq}\n"
-        code += f".L.end.{seq}:\n"
+        code += f".L.break.{brk}:\n"
+
+        brkseq = brk
+        contseq = cont
         return code
+
+    elif node.kind == parse.NodeKind.ND_SWITCH:
+        seq = labelseq
+        labelseq += 1
+
+        brk = brkseq
+        brkseq = seq
+
+        node.case_label = seq
+
+        gen(node.cond)
+        code += "  pop rax\n"
+
+        case_node = node.case_next
+        while case_node is not None:
+            case_node.case_label = labelseq
+            labelseq += 1
+            case_node.case_end_label = seq
+            code += f"  cmp rax, {case_node.val}\n"
+            code += f"  je .L.case.{case_node.case_label}\n"
+            case_node = case_node.case_next
+
+        if node.default_case:
+            node.default_case.case_label = labelseq
+            labelseq += 1
+            node.default_case.case_end_label = seq
+            code += f"  jmp .L.case.{node.default_case.case_label}\n"
+
+        code += f"  jmp .L.break.{brk}\n"
+        gen(node.then)
+        code += f".L.break.{brk}:\n"
+
+        brkseq = brk
+        return code
+
+    elif node.kind == parse.NodeKind.ND_CASE:
+        code += f".L.case.{node.case_label}:\n"
+        gen(node.lhs)
+        return code
+
     elif node.kind == parse.NodeKind.ND_BLOCK:
         node = node.body
         while node is not None:
             gen(node)
             node = node.next
+        return code
+    elif node.kind == parse.NodeKind.ND_BREAK:
+        if brkseq == 0:
+            raise RuntimeError("stray break statement")
+        code += f"  jmp .L.break.{brkseq}\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_CONTINUE:
+        if contseq == 0:
+            raise RuntimeError("stray continue statement")
+        code += f"  jmp .L.continue.{contseq}\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_GOTO:
+        code += f"  jmp .L.label.{node.label_name}\n"
+        return code
+    elif node.kind == parse.NodeKind.ND_LABEL:
+        code += f".L.label.{node.label_name}:\n"
+        gen(node.lhs)
         return code
     elif node.kind == parse.NodeKind.ND_FUNCALL:
         nargs = 0

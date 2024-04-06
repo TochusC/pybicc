@@ -7,14 +7,16 @@ class TagScope:
     next = None
     name = None
     ty = None
+    depth = 0
 
 
 class VarScope:
     next = None
     name = None
+    depth = 0
+
     var = None
     typedef = None
-
     enum_ty = None
     enum_val = None
 
@@ -78,6 +80,13 @@ class NodeKind(Enum):
     ND_LOGAND = 44  # &&
     ND_LOGOR = 45  # ||
 
+    ND_SWITCH = 46  # switch
+    ND_CASE = 47  # case
+    ND_BREAK = 48  # break
+    ND_CONTINUE = 49  # continue
+    ND_GOTO = 50  # goto
+    ND_LABEL = 51  # label
+
 
 class Var:
     name = None  # 函数名
@@ -140,6 +149,10 @@ class Node:
     # 调试用
     tok = None
 
+    # {}
+    body = None
+
+    Member = None
     # 变量
     var = None
 
@@ -150,10 +163,13 @@ class Node:
     init = None
     inc = None
 
-    # {}
-    body = None
+    # Goto 和 Label语句
+    label_name = None
 
-    Member = None
+    case_next = None
+    default_case = None
+    case_label = 0
+    case_end_label = 0
 
     # 函数相关
     funcname = None
@@ -184,19 +200,24 @@ globals = VarList()
 
 var_scope = VarScope()
 tag_scope = TagScope()
+scope_depth = 0
 
+current_switch = None
 
 def enter_scope():
+    global scope_depth
     sc = Scope()
     sc.var_scope = var_scope
     sc.tag_scope = tag_scope
+    scope_depth += 1
     return sc
 
 
 def leave_scope(sc):
-    global var_scope, tag_scope
+    global var_scope, tag_scope, scope_depth
     var_scope = sc.var_scope
     tag_scope = sc.tag_scope
+    scope_depth -= 1
 
 
 def new_label():
@@ -317,10 +338,11 @@ def read_type_suffix(base):
 
 
 def push_tag_scope(tok, ty):
-    global tag_scope
+    global tag_scope, scope_depth
     sc = TagScope()
     sc.next = tag_scope
     sc.name = tok.str
+    sc.depth = scope_depth
     sc.ty = ty
     tag_scope = sc
 
@@ -333,10 +355,30 @@ def struct_decl():
     if tag is not None and not tokenize.peek("{"):
         sc = find_tag(tag)
         if sc is None:
-            raise RuntimeError("unknown struct type", tokenize.token)
+            ty = type.struct_type()
+            push_tag_scope(tag, ty)
+            return ty
+
+        if sc.ty.kind != type.TypeKind.TY_STRUCT:
+            raise RuntimeError("not a struct", tokenize.token)
         return sc.ty
 
-    tokenize.expect("{")
+    if not tokenize.consume("{"):
+        return type.struct_type()
+
+    sc = TagScope()
+
+    if tag is not None:
+        sc = find_tag(tag)
+
+    if sc is not None and sc.depth == scope_depth:
+        if sc.ty.kind != type.TypeKind.TY_STRUCT:
+            raise RuntimeError("not a struct", tokenize.token)
+        ty = sc.ty
+    else:
+        ty = type.struct_type()
+        if tag is not None:
+            push_tag_scope(tag, ty)
 
     # 读取结构体成员
     head = type.Member()
@@ -346,8 +388,6 @@ def struct_decl():
         cur.next = struct_member()
         cur = cur.next
 
-    ty = type.Type()
-    ty.kind = type.TypeKind.TY_STRUCT
     ty.members = head.next
 
     offset = 0
@@ -363,9 +403,7 @@ def struct_decl():
         mem = mem.next
 
     ty.size = type.align_to(offset, ty.align)
-
-    if tag is not None:
-        push_tag_scope(tag, ty)
+    ty.is_incomplete = False
     return ty
 
 
@@ -640,13 +678,22 @@ def stmt():
 
 # stmt2 = "return" expr ";"
 #      | "if" "(" expr ")" stmt ("else" stmt)?
+#      | "switch" "(" expr ")" stmt
+#      | "case" num ":" stmt
+#      | "default" ":" stmt
 #      | "while" "(" expr ")" stmt
 #      | "for" "(" (expr? ";" | declaration) expr? ";" expr? ")" stmt
 #      | "{" stmt* "}"
 #      | "typedef" basetype ident ("[" num "]")* ";"
+#      | "break" ";"
+#      | "continue" ";"
+#      | "goto" ident ";"
+#      | ident ":" stmt
 #      | declaration
 #      | expr ";"
 def stmt2():
+    global current_switch
+
     if tokenize.consume("return"):
         node = new_unary(NodeKind.ND_RETURN, expr(), tok=tokenize.token)
         tokenize.expect(";")
@@ -660,6 +707,39 @@ def stmt2():
         node.then = stmt()
         if tokenize.consume("else"):
             node.els = stmt()
+        return node
+
+    if tokenize.consume("switch"):
+        node = new_node(NodeKind.ND_SWITCH)
+        tokenize.expect("(")
+        node.cond = expr()
+
+        tokenize.expect(")")
+
+        sw = current_switch
+        current_switch = node
+        node.then = stmt()
+        current_switch = sw
+        return node
+
+    if tokenize.consume("case"):
+        if current_switch is None:
+            raise RuntimeError("stray case", tokenize.token)
+        val = tokenize.expect_number()
+        tokenize.expect(":")
+        node = new_unary(NodeKind.ND_CASE, stmt())
+        node.val = val
+        node.case_next = current_switch.case_next
+        current_switch.case_next = node
+        return node
+
+    if tokenize.consume("default"):
+        if current_switch is None:
+            raise RuntimeError("stray default", tokenize.token)
+        tokenize.expect(":")
+
+        node = new_node(NodeKind.ND_DEFAULT, stmt())
+        current_switch.default_case = node
         return node
 
     if tokenize.consume("while"):
@@ -718,6 +798,29 @@ def stmt2():
 
     if is_typename():
         return declaration()
+
+    if tokenize.consume("break"):
+        tokenize.expect(";")
+        return new_node(NodeKind.ND_BREAK)
+
+    if tokenize.consume("continue"):
+        tokenize.expect(";")
+        return new_node(NodeKind.ND_CONTINUE)
+
+    if tokenize.consume("goto"):
+        node = new_node(NodeKind.ND_GOTO)
+        node.label_name = tokenize.expect_ident()
+        tokenize.expect(";")
+        return node
+
+    tok = tokenize.token
+    name = tokenize.consume_ident()
+    if name is not None:
+        if tokenize.consume(":"):
+            node = new_unary(NodeKind.ND_LABEL, stmt())
+            node.label_name = name.strFc
+            return node
+        tokenize.token = tok
 
     node = read_expr_stmt()
     tokenize.expect(";")

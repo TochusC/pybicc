@@ -36,11 +36,16 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-
 int main(){
-return 1&&0;
+int i = 0;
+switch(i){
+    case 0:
+        i = 1;
+        break;
 }
-
+        
+return i;
+}
 """
 
 DEBUG = True

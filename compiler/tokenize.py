@@ -10,12 +10,15 @@ token = None
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
                  '!', '[', ']', '{', '}', '&', '|', '~', '^',
-                 ',', '.', ';',]
+                 ',', '.', ':', ';',]
 
 
 keywords = ["return", "if", "else", "while", "for",
             "int", "short", "long", "void", "char", "bool",
-            "enum", "sizeof", "struct", "typedef", "static"]
+            "enum", "sizeof", "struct", "typedef", "static",
+            "break", "continue", "switch", "case", "default",
+            "goto"
+            ]
 ops = ["==", "!=", "<=", ">=", "->", "++", "--", "&&", "||", "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=",]
 
 
@@ -61,6 +64,12 @@ def consume(op):
 def peek(s):
     global token
     if token.kind != TokenKind.TK_RESERVED or token.str != s:
+        return None
+    return token
+
+def peek_ident():
+    global token
+    if token.kind != TokenKind.TK_IDENT:
         return None
     return token
 
