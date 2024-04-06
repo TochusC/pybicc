@@ -17,7 +17,7 @@ keywords = ["return", "if", "else", "while", "for",
             "int", "short", "long", "void", "char", "bool",
             "enum", "sizeof", "struct", "typedef", "static",
             "break", "continue", "switch", "case", "default",
-            "goto"
+            "goto", "union"
             ]
 ops = ["==", "!=", "<=", ">=", "->", "++", "--", "&&", "||", "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=",]
 

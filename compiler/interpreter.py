@@ -296,8 +296,45 @@ class Func:
         self.ret = None
 
 
+class Vars:
+    def __init__(self, name):
+        self.pos = 0
+        self.name = name
+
+
 glb_vars = {}
 glb_func = {}
+
+glb_vars_size = 0
+
+current_var = Vars('')
+
+
+def enterDataSegment(command_line_index, assembly_commands):
+    global current_var, glb_vars_size, glb_vars
+
+    while command_line_index < len(assembly_commands):
+        command_line = assembly_commands[command_line_index]  # 获取当前行的汇编代码
+        command_line_index += 1
+
+        command_line = command_line.strip()  # 去掉行首行尾的空格
+
+        if command_line == '.text':
+            return command_line_index
+
+        elif command_line[-1] == ':':
+            current_var = Vars(command_line[:-1])
+            current_var.pos = glb_vars_size
+            glb_vars[command_line[:-1]] = current_var
+
+        elif command_line[0:5] == '.zero':
+            command_segment = command_line.split(" ")
+            glb_vars_size += int(command_segment[1])
+
+        elif command_line[0:5] == '.byte':
+            command_segment = command_line.split(" ")
+            memory[glb_vars_size] = int(command_segment[1])
+            glb_vars_size += 1
 
 
 def run(code):
@@ -331,8 +368,7 @@ def run(code):
             if command_segment[0] == ".intel_syntax":
                 pass
             elif command_segment[0] == '.data':
-                # 处理全局变量 TODO
-                glb_vars = {}
+                command_line_index = enterDataSegment(command_line_index, assembly_commands)
             elif command_segment[0] == '.text':
                 pass
             elif command_segment[0] == '.global':
@@ -351,7 +387,6 @@ def run(code):
                     current_func.ret = command_line_index
                     break
                 command_line_index += 1
-
 
     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
     while RUNNING_COMMAND_LINE_INDEX < len(assembly_commands):
@@ -381,6 +416,13 @@ def run_command(command):
             register['rsp'] -= 8
             stack_top = register['rsp']
             memory[stack_top] = source_value
+        elif len(segment) == 3:
+            if segment[1] == 'offset':
+                var_name = segment[2]
+
+                register['rsp'] -= 8
+                stack_top = register['rsp']
+                memory[stack_top] = glb_vars[var_name].pos
 
         else:
             raise RuntimeError("push的参数量错误，共有%d个参数" % len(segment))

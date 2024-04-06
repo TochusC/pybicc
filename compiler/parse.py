@@ -204,6 +204,7 @@ scope_depth = 0
 
 current_switch = None
 
+
 def enter_scope():
     global scope_depth
     sc = Scope()
@@ -418,6 +419,65 @@ def struct_decl():
 
     ty.size = type.align_to(offset, ty.align)
     ty.is_incomplete = False
+
+    return ty
+
+
+def union_decl():
+    tag = tokenize.consume_ident()
+
+    if tag is not None and not tokenize.peek("{"):
+        sc = find_tag(tag)
+        if sc is None:
+            ty = type.struct_type()
+            push_tag_scope(tag, ty)
+            return ty
+
+        if sc.ty.kind != type.TypeKind.TY_STRUCT:
+            raise RuntimeError("not a struct", tokenize.token)
+        return sc.ty
+
+    if not tokenize.consume("{"):
+        return type.struct_type()
+
+    sc = TagScope()
+
+    if tag is not None:
+        sc = find_tag(tag)
+
+    if sc is not None and sc.depth == scope_depth:
+        if sc.ty.kind != type.TypeKind.TY_STRUCT:
+            raise RuntimeError("not a struct", tokenize.token)
+        ty = sc.ty
+    else:
+        ty = type.struct_type()
+        if tag is not None:
+            push_tag_scope(tag, ty)
+
+    # 读取结构体成员
+    head = type.Member()
+    cur = head
+
+    while not tokenize.consume('}'):
+        cur.next = struct_member()
+        cur = cur.next
+
+    ty.members = head.next
+
+    offset = 0
+    mem = ty.members
+    while mem is not None:
+        offset = type.align_to(offset, mem.ty.align)
+        mem.offset = offset
+        offset += mem.ty.size
+
+        if ty.align < mem.ty.align:
+            ty.align = mem.ty.align
+
+        mem = mem.next
+
+    ty.size = type.align_to(offset, ty.align)
+    ty.is_incomplete = False
     return ty
 
 
@@ -528,6 +588,12 @@ def global_var():
     ty = basetype()
     name = tokenize.expect_ident()
     ty = type_suffix(ty)
+
+    if tokenize.peek('='):
+        tokenize.consume('=')
+        new_gvar(name, ty, True)
+        return
+
     tokenize.expect(';')
     new_gvar(name, ty, True)
 
@@ -567,8 +633,6 @@ def program():
             if fn is not None:
                 cur.next = fn
                 cur = cur.next
-        elif tokenize.consume('struct'):
-            struct_decl()
         else:
             global_var()
 
@@ -579,7 +643,7 @@ def program():
     return prog
 
 
-# basetype = builtin-type | struct-decl | typedef-name | enum-specifier
+# basetype = builtin-type | struct-decl | typedef-name | enum-specifier  "*"*
 # builtin-type = "void" | "_Bool" | "char" | "short" | "int" | "long"
 def basetype():
     if not is_typename():
@@ -599,6 +663,8 @@ def basetype():
         ty = type.long_type
     elif tokenize.consume('struct'):
         ty = struct_decl()
+    elif tokenize.consume('union'):
+        ty = union_decl()
     elif tokenize.consume('enum'):
         ty = enum_specifier()
     else:
@@ -683,6 +749,7 @@ def is_typename():
             or tokenize.peek("void")
             or tokenize.peek("bool")
             or tokenize.peek("enum")
+            or tokenize.peek("union")
             or find_typedef(tokenize.token))
 
 

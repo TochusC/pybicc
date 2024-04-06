@@ -196,6 +196,7 @@ def gen(node):
     elif node.kind == parse.NodeKind.ND_VAR \
             or node.kind == parse.NodeKind.ND_MEMBER:
         gen_addr(node)
+        print(node.ty.kind)
         if node.ty.kind != type.TypeKind.TY_ARRAY:
             load(node.ty)
         return code

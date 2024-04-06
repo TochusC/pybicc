@@ -36,11 +36,11 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-struct edd
 int main(){
-int i;
-i = 0;
-return i;
+int x[10];
+
+x[1]=3;
+return x[1];
 }
 """
 
