@@ -9,7 +9,7 @@
 
 
 
-[![version](https://img.shields.io/badge/Version-0.2.6u-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
+[![version](https://img.shields.io/badge/Version-0.2.9u-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
 [![course](https://img.shields.io/badge/UPC-CompilerDesign-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
 
 [![madewithlove](https://img.shields.io/badge/made_with-%E2%9D%A4-red?style=for-the-badge&labelColor=orange)](https://github.com/TochusC/ai-assistant-teaching-website)
@@ -37,15 +37,12 @@
 </div>
 
 ---
-未完成版本，缺少解释器实现。
+支持的变量类型：int, char, short, long, float, double。
+支持指针、函数、数组、结构体。
 
-支持的变量类型：int, char, short, long
-支持指针、函数、数组、结构体
+支持整数、字符串、浮点数字面值常量
 
-支持字面值常量。
-
-支持运算符：+ - * / % 
-== != < <= > >= && || -> ! = & | ^ ~  
+支持运算符："==", "!=", "<=", ">=", "->", "++", "--", "&&", "||", "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=", 
 
 支持IF-ELSE, FOR, WHILE语句
 

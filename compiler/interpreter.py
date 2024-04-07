@@ -832,6 +832,42 @@ def run_command(command):
 
             elif addressing_mode1 == AddressingMode.MEMORY:
                 memory[getMemoryAddress(op_destination)] = ret
+    elif segment[0] == "shl":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode != AddressingMode.REGISTER:
+                raise RuntimeError("shl指令的目的操作数错误, %s" % destination)
+
+            source = segment[2]
+            addressing_mode = addressing(source)
+
+            source_value = getValueByAddressing(addressing_mode, source)
+
+            register[destination] = register[destination] << source_value
+
+        else:
+            raise RuntimeError("shl指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "shr":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode != AddressingMode.REGISTER:
+                raise RuntimeError("shr指令的目的操作数错误, %s" % destination)
+
+            source = segment[2]
+            addressing_mode = addressing(source)
+
+            source_value = getValueByAddressing(addressing_mode, source)
+
+            register[destination] = register[destination] >> source_value
+
+        else:
+            raise RuntimeError("shr指令的参数量错误，共有%d个参数" % len(segment))
     # print指令，调试用。
     elif segment[0] == "print":
         output += "print rax value:" + str(register['rax']) + "\n"

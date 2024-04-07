@@ -180,6 +180,12 @@ def gen_binary(node):
         code += "  or rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_BITXOR]:
         code += "  xor rax, rdi\n"
+    elif node.kind in [parse.NodeKind.ND_SHL, parse.NodeKind.ND_SHL_EQ]:
+        code += "  mov cl, rdi\n"
+        code += "  shl rax, cl\n"
+    elif node.kind in [parse.NodeKind.ND_SHR, parse.NodeKind.ND_SHR_EQ]:
+        code += "  mov cl, rdi\n"
+        code += "  sar rax, cl\n"
     elif node.kind in [parse.NodeKind.ND_EQ]:
         code += "  cmp rax, rdi\n"
         code += "  sete al\n"
@@ -259,6 +265,17 @@ def gen(node):
         dec(node.ty)
         store(node.ty)
         inc(node.ty)
+        return code
+    elif node.kind in [parse.NodeKind.ND_ADD_EQ, parse.NodeKind.ND_SUB_EQ,
+                       parse.NodeKind.ND_PTR_ADD_EQ, parse.NodeKind.ND_PTR_SUB_EQ,
+                       parse.NodeKind.ND_MUL_EQ, parse.NodeKind.ND_DIV_EQ,
+                       parse.NodeKind.ND_SHL_EQ, parse.NodeKind.ND_SHR_EQ,]:
+        gen_lval(node.lhs)
+        code += "  push [rsp]\n"
+        load(node.lhs.ty)
+        gen(node.rhs)
+        gen_binary(node)
+        store(node.lhs.ty)
         return code
     elif node.kind == parse.NodeKind.ND_COMMA:
         gen(node.lhs)

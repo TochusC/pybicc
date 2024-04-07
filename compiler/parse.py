@@ -87,6 +87,11 @@ class NodeKind(Enum):
     ND_GOTO = 50  # goto
     ND_LABEL = 51  # label
 
+    ND_SHR = 52  # >>
+    ND_SHL = 53  # <<
+    ND_SHR_EQ = 54  # >>=
+    ND_SHL_EQ = 55  # <<=
+
 
 class Var:
     name = None  # 变量名
@@ -943,7 +948,7 @@ def expr():
 
 
 # assign    = logor (assign-op assign)?
-# assign-op = "=" | "+=" | "-=" | "*=" | "/="
+# assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
 def assign():
     node = logor()
     if tokenize.consume("="):
@@ -952,7 +957,10 @@ def assign():
         return new_binary(NodeKind.ND_MUL_EQ, node, assign(), tok=tokenize.token)
     if tokenize.consume("/="):
         return new_binary(NodeKind.ND_DIV_EQ, node, assign(), tok=tokenize.token)
-
+    if tokenize.consume("<<="):
+        return new_binary(NodeKind.ND_SHL_EQ, node, assign(), tok=tokenize.token)
+    if tokenize.consume(">>="):
+        return new_binary(NodeKind.ND_SHR_EQ, node, assign(), tok=tokenize.token)
     if tokenize.consume("+="):
         type.add_type(node)
         if node.ty.base is not None:
@@ -979,19 +987,32 @@ def equality():
             return node
 
 
-# relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+# relational = shift ("<" shift | "<=" shift | ">" shift | ">=" shift)*
 def relational():
-    node = add()
+    node = shift()
 
     while True:
         if tokenize.consume("<"):
-            node = new_binary(NodeKind.ND_LT, node, add(), tok=tokenize.token)
+            node = new_binary(NodeKind.ND_LT, node, shift(), tok=tokenize.token)
         elif tokenize.consume("<="):
-            node = new_binary(NodeKind.ND_LE, node, add(), tok=tokenize.token)
+            node = new_binary(NodeKind.ND_LE, node, shift(), tok=tokenize.token)
         elif tokenize.consume(">"):
-            node = new_binary(NodeKind.ND_LT, add(), node, tok=tokenize.token)
+            node = new_binary(NodeKind.ND_LT, shift(), node, tok=tokenize.token)
         elif tokenize.consume(">="):
-            node = new_binary(NodeKind.ND_LE, add(), node, tok=tokenize.token)
+            node = new_binary(NodeKind.ND_LE, shift(), node, tok=tokenize.token)
+        else:
+            return node
+
+
+# shift = add ("<<" add | ">>" add)*
+def shift():
+    node = add()
+
+    while True:
+        if tokenize.consume("<<"):
+            node = new_binary(NodeKind.ND_SHL, node, add(), tok=tokenize.token)
+        elif tokenize.consume(">>"):
+            node = new_binary(NodeKind.ND_SHR, node, add(), tok=tokenize.token)
         else:
             return node
 
