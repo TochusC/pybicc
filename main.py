@@ -36,9 +36,10 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-int i = 0;
 int main(){
-return i;
+int i = 4;
+i <<= 1;
+return i << 1;
 }
 """
 
