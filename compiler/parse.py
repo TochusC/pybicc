@@ -89,10 +89,11 @@ class NodeKind(Enum):
 
 
 class Var:
-    name = None  # 函数名
+    name = None  # 变量名
     offset = None  # 函数距离RBP的偏移量
     ty = None  # 类型
     is_local = None  # 是本地变量还是全局变量
+    val = None  # 值
 
     contents = None
     cont_len = None
@@ -311,7 +312,7 @@ def new_unary(kind, lhs, tok=tokenize.token):
 def new_num():
     if tokenize.token.kind != tokenize.TokenKind.TK_NUM:
         raise RuntimeError("Error: expected a number, but got %s" % tokenize.token.str)
-    if {'e', 'E', '.', 'f', "F"} & set(tokenize.token.str):
+    if {'e', 'E', '.', 'f', "F"} & set(str(tokenize.token.str)):
         if 'f' in tokenize.token.str or 'F' in tokenize.token.str:
             node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str[:-1]), tok=tokenize.token)
             node.ty = type.float_type
@@ -323,8 +324,9 @@ def new_num():
             tokenize.token = tokenize.token.next
             return node
     else:
+        node = Node(NodeKind.ND_NUM, val=int(tokenize.token.str), tok=tokenize.token)
         tokenize.token = tokenize.token.next
-        return Node(NodeKind.ND_NUM, val=int(tokenize.token.str), tok=tokenize.token)
+        return node
 
 
 def new_var_node(var, tok=tokenize.token):
@@ -682,6 +684,10 @@ def basetype():
         ty = union_decl()
     elif tokenize.consume('enum'):
         ty = enum_specifier()
+    elif tokenize.consume('float'):
+        ty = type.float_type
+    elif tokenize.consume('double'):
+        ty = type.double_type
     else:
         ty = find_var(tokenize.consume_ident())
         ty = ty.typedef
@@ -765,6 +771,8 @@ def is_typename():
             or tokenize.peek("bool")
             or tokenize.peek("enum")
             or tokenize.peek("union")
+            or tokenize.peek("float")
+            or tokenize.peek("double")
             or find_typedef(tokenize.token))
 
 

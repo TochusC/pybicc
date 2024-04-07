@@ -48,6 +48,7 @@ def gen_lval(node):
         raise RuntimeError(f"Error: {node.tok.str} is not an lvalue.\n")
     gen_addr(node)
 
+
 def float_to_ieee754(f):
     # 将浮点数转换为IEEE 754格式的二进制表示（32位）
     packed = struct.pack('>f', f)
@@ -62,6 +63,7 @@ def double_to_ieee754(num):
     # 将字节序列转换为十六进制表示
     ieee754_hex = ''.join(f'{byte:02X}' for byte in ieee754_bytes)
     return ieee754_hex
+
 
 def load(ty):
     global code
@@ -126,6 +128,7 @@ def truncate(ty):
 
     code += "  push rax\n"
 
+
 def inc(ty):
     global code
     code += "  pop rax\n"
@@ -135,6 +138,7 @@ def inc(ty):
         code += f"  add rax, {ty.base.size}\n"
     code += "  push rax\n"
 
+
 def dec(ty):
     global code
     code += "  pop rax\n"
@@ -143,6 +147,7 @@ def dec(ty):
     else:
         code += f"  sub rax, {ty.base.size}\n"
     code += "  push rax\n"
+
 
 def gen_binary(node):
     global code
@@ -154,15 +159,15 @@ def gen_binary(node):
     elif node.kind in [parse.NodeKind.ND_SUB, parse.NodeKind.ND_SUB_EQ]:
         code += "  sub rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_PTR_ADD, parse.NodeKind.ND_PTR_ADD_EQ]:
-        code += f"  imul rdi, { node.ty.base.size }\n"
+        code += f"  imul rdi, {node.ty.base.size}\n"
         code += "  add rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_PTR_SUB, parse.NodeKind.ND_PTR_SUB_EQ]:
-        code += f"  imul rdi, { node.ty.base.size }\n"
+        code += f"  imul rdi, {node.ty.base.size}\n"
         code += "  sub rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_PTR_DIFF]:
         code += "  sub rax, rdi\n"
         code += "  cqo\n"
-        code += f"  mov rdi, { node.ty.base.size }\n"
+        code += f"  mov rdi, {node.ty.base.size}\n"
         code += "  idiv rdi\n"
     elif node.kind in [parse.NodeKind.ND_MUL, parse.NodeKind.ND_MUL_EQ]:
         code += "  imul rax, rdi\n"
@@ -192,8 +197,6 @@ def gen_binary(node):
         code += "  setle al\n"
         code += "  movzb rax, al\n"
     code += "  push rax\n"
-
-
 
 
 def gen(node):

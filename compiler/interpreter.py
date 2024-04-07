@@ -103,6 +103,9 @@ register = {
     "ZF": 0,  # 零标志
     "SF": 0,  # 符号标志
     "OF": 0,  # 溢出标志
+
+    # 浮点寄存器
+    "xmm0": 0,
 }
 
 output = ''
@@ -709,6 +712,44 @@ def run_command(command):
 
         else:
             raise RuntimeError("movsb指令的参数量错误，共有%d个参数" % len(segment))
+    # movss指令，用于将一个双字（32位）的单精度浮点数值移动到指定寄存器。
+    elif segment[0] == "movss":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode == AddressingMode.REGISTER:
+                source = segment[2]
+                addressing_mode = addressing(source)
+                source_value = getValueByAddressing(addressing_mode, source)
+
+                register[destination] = source_value
+
+            else:
+                raise RuntimeError("movss指令的目的操作数错误, %s" % destination)
+
+        else:
+            raise RuntimeError("movss指令的参数量错误，共有%d个参数" % len(segment))
+    # movsd指令，用于将一个双字（32位）的双精度浮点数值移动到指定寄存器。
+    elif segment[0] == "movsd":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode == AddressingMode.REGISTER:
+                source = segment[2]
+                addressing_mode = addressing(source)
+                source_value = getValueByAddressing(addressing_mode, source)
+
+                register[destination] = source_value
+
+            else:
+                raise RuntimeError("movsd指令的目的操作数错误, %s" % destination)
+
+        else:
+            raise RuntimeError("movsd指令的参数量错误，共有%d个参数" % len(segment))
     # movsxd指令，用于将一个双字（32位）的符号整数值符号扩展并移动到指定寄存器。
     elif segment[0] == "movsxd":
         if len(segment) == 5:
