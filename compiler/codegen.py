@@ -3,6 +3,7 @@
 
 ##  将词法分析输出的抽象语法树转换为汇编语言。
 """
+import struct
 
 from compiler import type, parse
 
@@ -47,6 +48,20 @@ def gen_lval(node):
         raise RuntimeError(f"Error: {node.tok.str} is not an lvalue.\n")
     gen_addr(node)
 
+def float_to_ieee754(f):
+    # 将浮点数转换为IEEE 754格式的二进制表示（32位）
+    packed = struct.pack('>f', f)
+    # 只取前4个字节（32位），即4个十六进制数
+    hex_representation = ''.join(f'{byte:02x}' for byte in packed[:4])
+    return hex_representation
+
+
+def double_to_ieee754(num):
+    # 将浮点数转换为 64 位 IEEE 754 格式的字节序列
+    ieee754_bytes = struct.pack('>d', num)
+    # 将字节序列转换为十六进制表示
+    ieee754_hex = ''.join(f'{byte:02X}' for byte in ieee754_bytes)
+    return ieee754_hex
 
 def load(ty):
     global code
@@ -179,6 +194,8 @@ def gen_binary(node):
     code += "  push rax\n"
 
 
+
+
 def gen(node):
     global code, labelseq, brkseq, contseq
 
@@ -187,7 +204,12 @@ def gen(node):
     elif node.kind == parse.NodeKind.ND_NULL:
         return code
     elif node.kind == parse.NodeKind.ND_NUM:
-        code += "  push " + str(node.val) + "\n"
+        if node.ty.kind == type.TypeKind.TY_FLOAT:
+            code += f"  push {float_to_ieee754(node.val)}\n"
+        elif node.ty.kind == type.TypeKind.TY_DOUBLE:
+            code += f"  push {double_to_ieee754(node.val)}\n"
+        else:
+            code += "  push " + str(node.val) + "\n"
         return code
     elif node.kind == parse.NodeKind.ND_EXPR_STMT:
         gen(node.lhs)

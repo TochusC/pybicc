@@ -2,6 +2,7 @@
     Intel 80x86 模拟器
     用于模拟汇编代码的执行过程
 """
+import struct
 from enum import Enum
 
 MEMORY_SIZE = 1024
@@ -125,11 +126,8 @@ def addressing(source):
         return AddressingMode.MEMORY
 
     # 立即数寻址模式
-    elif source.isdigit():
-        return AddressingMode.IMMEDIATE
-
     else:
-        raise RuntimeError("无法识别的源操作数: %s" % source)
+        return AddressingMode.IMMEDIATE
 
 
 def getMemoryAddress(src):
@@ -263,6 +261,19 @@ def getMemoryAddress(src):
     result = eval(root)
     return result
 
+def ieee754_to_float(hex_str):
+    # 将十六进制字符串转换为字节序列
+    packed = bytes.fromhex(hex_str)
+    # 将字节序列解析为浮点数
+    return struct.unpack('>f', packed)[0]
+
+
+def ieee754_to_double(ieee754_hex):
+    # 将十六进制字符串转换为字节序列
+    ieee754_bytes = bytes.fromhex(ieee754_hex)
+    # 将字节序列解析为浮点数
+    value = struct.unpack('>d', ieee754_bytes)[0]
+    return value
 
 # 根据寻址模式获取操作数的值
 def getValueByAddressing(AddressingMode, source):
@@ -273,7 +284,16 @@ def getValueByAddressing(AddressingMode, source):
     :return value: 源操作数的值
     """
     if AddressingMode == AddressingMode.IMMEDIATE:
-        return int(source)
+        try:
+            return int(source)
+        except ValueError:
+            try:
+                return ieee754_to_float(source)
+            except Exception:
+                try:
+                    return ieee754_to_double(source)
+                except Exception:
+                    raise RuntimeError("无法识别的立即数: %s" % source)
 
     elif AddressingMode == AddressingMode.REGISTER:
         return register[source]

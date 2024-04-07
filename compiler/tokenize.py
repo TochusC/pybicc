@@ -10,7 +10,7 @@ token = None
 def ispunct(c):
     return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
                  '!', '[', ']', '{', '}', '&', '|', '~', '^',
-                 ',', '.', ':', ';',]
+                 ',', '.', ':', ';', ]
 
 
 keywords = ["return", "if", "else", "while", "for",
@@ -19,7 +19,7 @@ keywords = ["return", "if", "else", "while", "for",
             "break", "continue", "switch", "case", "default",
             "goto", "union"
             ]
-ops = ["==", "!=", "<=", ">=", "->", "++", "--", "&&", "||", "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=",]
+ops = ["==", "!=", "<=", ">=", "->", "++", "--", "&&", "||", "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=", ]
 
 
 class TokenKind(Enum):
@@ -67,6 +67,7 @@ def peek(s):
         return None
     return token
 
+
 def peek_ident():
     global token
     if token.kind != TokenKind.TK_IDENT:
@@ -104,6 +105,7 @@ def expect_number():
     global token
     if token.kind != TokenKind.TK_NUM:
         raise RuntimeError("Error: expected a number, but got %s" % token.str)
+
     val = int(token.str)
     token = token.next
     return val
@@ -135,13 +137,47 @@ def starts_with_reserved(p, raw):
             return op, p + len(op)
     return None, p
 
+
+def read_number(raw, start):
+    tok, p = read_int_literal(raw, start)
+
+    if raw[p] in ['.', 'e', 'E', 'f', 'F']:
+        return read_float_literal(raw, start)
+    else:
+        return tok, p
+
+
+def read_float_literal(raw, start):
+    p = start
+    while p < len(raw) and raw[p].isdigit():
+        p += 1
+
+    if raw[p] == '.':
+        p += 1
+        while p < len(raw) and raw[p].isdigit():
+            p += 1
+
+    if raw[p] in ['e', 'E']:
+        p += 1
+        if raw[p] in ['+', '-']:
+            p += 1
+        while p < len(raw) and raw[p].isdigit():
+            p += 1
+
+    if raw[p] in ['f', 'F']:
+        p += 1
+
+    tok = Token(TokenKind.TK_NUM, raw[start:p], None)
+    return tok, p
+
+
 def read_int_literal(raw, start):
     p = start
     base = None
-    if raw[p:p+2] == "0x":
+    if raw[p:p + 2] == "0x":
         p += 2
         base = 16
-    elif raw[p:p+2] == "0b":
+    elif raw[p:p + 2] == "0b":
         p += 2
         base = 2
     elif raw[p] == "0":
@@ -150,6 +186,9 @@ def read_int_literal(raw, start):
         base = 10
 
     while p < len(raw) and raw[p].isdigit():
+        p += 1
+
+    if raw[p] in ['u', 'U']:
         p += 1
 
     val = int(raw[start:p], base)
@@ -182,6 +221,7 @@ def get_escape_char(c):
         return 0
     return c
 
+
 def read_char_literal(raw, start):
     p = start
     q = p + 1
@@ -200,6 +240,7 @@ def read_char_literal(raw, start):
 
     tok = Token(TokenKind.TK_NUM, ord(c), None)
     return tok, q + 1
+
 
 def read_string_literal(raw, start):
     p = start
@@ -237,13 +278,13 @@ def tokenize(raw):
             p += 1
             continue
 
-        if raw[p:p+2] == '//':
+        if raw[p:p + 2] == '//':
             p += 2
             while raw[p] != '\n':
                 p += 1
             continue
 
-        if raw[p:p+2] == '/*':
+        if raw[p:p + 2] == '/*':
             p += 2
             while raw[p:p + 2] != '*/':
                 p += 1
@@ -287,8 +328,8 @@ def tokenize(raw):
             continue
 
         # 数字
-        if raw[p].isdigit():
-            cur.next, p = read_int_literal(raw, p)
+        if raw[p].isdigit() or (raw[p] == '.' and raw[p + 1].isdigit()):
+            cur.next, p = read_number(raw, p)
             cur = cur.next
             continue
 

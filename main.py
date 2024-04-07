@@ -37,10 +37,7 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
 int main(){
-int x[10];
-
-x[1]=3;
-return x[1];
+return 1.23;
 }
 """
 

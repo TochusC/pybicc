@@ -15,6 +15,9 @@ class TypeKind(Enum):
     TY_BOOL = 10
     TY_ENUM = 11
 
+    TY_FLOAT = 12
+    TY_DOUBLE = 13
+
 
 class Member:
     def __init__(self):
@@ -47,6 +50,8 @@ char_type = Type(kind=TypeKind.TY_CHAR, size=1, align=1)
 int_type = Type(kind=TypeKind.TY_INT, size=4, align=4)
 short_type = Type(kind=TypeKind.TY_SHORT, size=2, align=2)
 long_type = Type(kind=TypeKind.TY_LONG, size=8, align=8)
+float_type = Type(kind=TypeKind.TY_FLOAT, size=4, align=4)
+double_type = Type(kind=TypeKind.TY_DOUBLE, size=8, align=8)
 
 def struct_type():
     ty = new_type(TypeKind.TY_STRUCT, 0, 1)

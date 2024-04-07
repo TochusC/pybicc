@@ -308,8 +308,23 @@ def new_unary(kind, lhs, tok=tokenize.token):
     return Node(kind, 0, lhs, tok=tok)
 
 
-def new_num(val, tok=tokenize.token):
-    return Node(NodeKind.ND_NUM, val, tok=tok)
+def new_num():
+    if tokenize.token.kind != tokenize.TokenKind.TK_NUM:
+        raise RuntimeError("Error: expected a number, but got %s" % tokenize.token.str)
+    if {'e', 'E', '.', 'f', "F"} & set(tokenize.token.str):
+        if 'f' in tokenize.token.str or 'F' in tokenize.token.str:
+            node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str[:-1]), tok=tokenize.token)
+            node.ty = type.float_type
+            tokenize.token = tokenize.token.next
+            return node
+        else:
+            node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str), tok=tokenize.token)
+            node.ty = type.double_type
+            tokenize.token = tokenize.token.next
+            return node
+    else:
+        tokenize.token = tokenize.token.next
+        return Node(NodeKind.ND_NUM, val=int(tokenize.token.str), tok=tokenize.token)
 
 
 def new_var_node(var, tok=tokenize.token):
@@ -1131,7 +1146,11 @@ def func_args():
     return head
 
 
-# primary = "(" expr ")" | "sizeof" unary | ident func-args? | str | num
+# primary = "(" expr ")"
+#         | "sizeof" unary
+#         | ident func-args?
+#         | str
+#         | num
 # args = "(" ident ("," ident)* ")"
 def primary():
     if tokenize.consume("("):
@@ -1173,4 +1192,4 @@ def primary():
         var.cont_len = tok.cont_len
         return new_var_node(var, tok=tok)
 
-    return new_num(tokenize.expect_number(), tok=tokenize.token)
+    return new_num()
