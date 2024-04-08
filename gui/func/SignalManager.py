@@ -14,6 +14,12 @@ class Communicate(QObject):
     onActiveFileChange = pyqtSignal(str)
     afterActiveFileChange = pyqtSignal(str)
 
+    onActiveCompileFileChange = pyqtSignal(str)
+    afterActiveCompileFileChange = pyqtSignal(str)
+
+    onActiveResultFileChange = pyqtSignal(str)
+    afterActiveResultFileChange = pyqtSignal(str)
+
     beforeCompile = pyqtSignal()
     onCompile = pyqtSignal(str)
     afterCompile = pyqtSignal(str)

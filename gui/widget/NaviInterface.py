@@ -123,12 +123,16 @@ class CompileResult(QFrame):
 
         self.comm.afterCompile[str].connect(self.text_edit.setText)
 
-    def addTab(self, routeKey, text):
-        self.tabBar.addTab(routeKey, text, FluentIcon.DOCUMENT)
+        self.text_edit.textChanged.connect(
+            lambda: self.comm.onActiveCompileFileChange.emit(self.text_edit.toPlainText()))
+        self.comm.afterActiveCompileFileChange[str].connect(self.changeToActiveFile)
 
     def changeToActiveFile(self, text):
         if self.text_edit.toPlainText() != text:
             self.text_edit.setText(text)
+
+    def addTab(self, routeKey, text):
+        self.tabBar.addTab(routeKey, text, FluentIcon.DOCUMENT)
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()

@@ -93,6 +93,7 @@ class Window(FramelessWindow):
         self.comm.beforeCut.connect(self.cutManager.cut)
 
         self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
+        self.comm.onActiveCompileFileChange[str].connect(self.dataTraveler.changeActiveCompileFileContent)
 
         self.comm.beforeCompile.connect(
             lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
