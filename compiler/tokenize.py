@@ -20,6 +20,8 @@ keywords = ["return", "if", "else", "while", "for",
             "goto", "union", "float", "double",
             ]
 
+funs = ["read", "print"]
+
 ops = ["==", "!=", "<=", ">=", "->", "++", "--",
        "&&", "||", "<<=", ">>=", "<<", ">>",
        "*=", "/=", "%=", "+=", "-=", "&=", "^=", "|=", ]
@@ -31,6 +33,7 @@ class TokenKind(Enum):
     TK_EOF = 3  # End-of-file markers 文件结束标记
     TK_IDENT = 4  # Identifiers 标识符
     TK_STR = 5  # String literals 字符串字面值
+    TK_FUNC = 6 # 内置函数
 
 
 class Token:

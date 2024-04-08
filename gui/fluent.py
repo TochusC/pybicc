@@ -5,7 +5,8 @@ from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 from PyQt6.QtWidgets import QApplication, QStackedWidget, QGridLayout, QMenu, QVBoxLayout, QFileDialog
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, MessageBox,
-                            isDarkTheme, qrouter, SplashScreen, setTheme, Theme)
+                            isDarkTheme, qrouter, SplashScreen, setTheme, Theme, SubtitleLabel, LineEdit,
+                            MessageBoxBase)
 from qfluentwidgets import FluentIcon as FIF
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
@@ -95,17 +96,78 @@ class Window(FramelessWindow):
 
         self.comm.beforeCompile.connect(
             lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
-        self.comm.onCompile[str].connect(
-            lambda code: self.comm.afterCompile.emit(self.compileController.compile(code)))
+
+        self.comm.onCompile[str].connect(self.startCompile)
+
         self.comm.afterCompile[str].connect(self.dataTraveler.updateAssembly)
 
         self.comm.beforeRun.connect(
             lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
-        self.comm.onRun[str].connect(
-            lambda assembly: self.comm.afterRun.emit(self.compileController.run(assembly)))
+        self.comm.onRun[str].connect(self.startRun)
 
         self.comm.clickhelper.connect(self.helper.showMessageBox)
         self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
+
+    def startRun(self, assembly):
+        try:
+            self.comm.afterRun.emit(self.compileController.run(assembly))
+        except Exception as e:
+            w = MessageBox(
+                '发生错误！❌',
+                f'运行错误：{e}',
+                self
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
+
+    class InputMessageBox(MessageBoxBase):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.titleLabel = SubtitleLabel('请求输入', self)
+            self.inputEdit = LineEdit(self)
+
+            self.inputEdit.setPlaceholderText('输入')
+            self.inputEdit.setClearButtonEnabled(True)
+
+            # add widget to view layout
+            self.viewLayout.addWidget(self.titleLabel)
+            self.viewLayout.addWidget(self.inputEdit)
+
+            # change the text of button
+            self.yesButton.setText('确定')
+
+            self.widget.setMinimumWidth(350)
+
+    def showInputMessageBox(self):
+        w = self.InputMessageBox(self)
+        if w.exec():
+            return w.inputEdit.text()
+
+    def startCompile(self, code):
+        try:
+            self.comm.afterCompile.emit(self.compileController.compile(code))
+        except Exception as e:
+            w = MessageBox(
+                '发生错误！❌',
+                f'编译错误：{e}',
+                self
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
+    def startRun(self, assembly):
+        try:
+            self.comm.afterRun.emit(self.compileController.run(assembly))
+        except Exception as e:
+            w = MessageBox(
+                '发生错误！❌',
+                f'运行错误：{e}',
+                self
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
 
     def initLayout(self):#初始化窗口
         self.gridLayout.setSpacing(0)

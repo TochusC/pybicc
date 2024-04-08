@@ -7,7 +7,7 @@ int main() {
         y = y + 1;
     }
     if(y > x){
-        *(&x+8)=7; return y;
+        *(&x+1)=7; return y;
     }
     else{
         int *p=&i; int **z=&p; return **z;

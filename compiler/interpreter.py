@@ -6,7 +6,7 @@ import struct
 from enum import Enum
 
 MEMORY_SIZE = 1024
-
+CompileController = None
 # 系统内存被分为栈和堆两部分，栈存放程序数据，堆存放操作系统。
 # memory = [heap + stack]
 # 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
@@ -327,6 +327,8 @@ class Vars:
 
 glb_vars = {}
 glb_func = {}
+
+inset_func = {'read', 'write'}
 
 glb_vars_size = 0
 
@@ -918,6 +920,17 @@ def run_command(command):
                 PREV_FUNC.append({'func': CURRENT_FUNC, 'index': RUNNING_COMMAND_LINE_INDEX})
                 CURRENT_FUNC = func_name
                 RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
+            elif func_name in inset_func:
+                if func_name == 'read':
+                    if CompileController is not None:
+                        addr = getMemoryAddress('[rdi]')
+                        memory[addr] = CompileController.request_input()
+                    else:
+                        addr = getMemoryAddress('[rdi]')
+                        print("请求输入：")
+                        memory[addr] = input()
+                elif func_name == 'write':
+                    output += str(register['rdi']) + '\n'
             else:
                 raise RuntimeError("未找到函数: %s" % func_name)
         else:

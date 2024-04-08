@@ -1,9 +1,13 @@
 from compiler import interpreter, tokenize, codegen, parse
 from compiler.utils import align_to
 
+
+
+
 class CompileController:
     def __init__(self, parent):
         self.parent = parent
+
 
     def compile(self, code):
         tokenize.token = tokenize.tokenize(code)
@@ -21,8 +25,12 @@ class CompileController:
         return codegen.codegen(parse.prog)
 
     def run(self, assembly):
+        interpreter.CompileController = self
         interpreter.run(assembly)
         return interpreter.output
+
+    def request_input(self):
+        return self.parent.showInputMessageBox()
 
 
 if __name__ == '__main__':
@@ -38,5 +46,3 @@ if __name__ == '__main__':
     assembly = cc.compile(code)
     print(assembly)
     print(cc.run(assembly))
-
-

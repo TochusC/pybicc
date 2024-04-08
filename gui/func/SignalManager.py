@@ -27,3 +27,5 @@ class Communicate(QObject):
     clickhelper = pyqtSignal()
     afterCut = pyqtSignal(dict)
     beforeCut = pyqtSignal()
+
+    requestInput = pyqtSignal()
