@@ -13,6 +13,9 @@ from gui.func.CompileController import CompileController
 from gui.func.FileManager import FileManager
 from gui.func.DataTraveler import DataTraveler
 from gui.func.SignalManager import SignalManager
+from gui.func.AboutUS import AboutUS
+from gui.func.Helper import Helper
+from gui.func.CutManager import CutManager
 from gui.widget.MenuBar import MenuBar
 from gui.widget.NaviInterface import CompileInterface, OverviewInterface, RunInterface, Widget, \
     AvatarWidget
@@ -44,10 +47,13 @@ class Window(FramelessWindow):
         loop.exec()
 
         # 初始化功能类
+        self.cutManager = CutManager(self)
         self.fileManager = FileManager(self)
         self.signalManager = SignalManager(self)
         self.dataTraveler = DataTraveler(self)
         self.compileController = CompileController(self)
+        self.aboutus = AboutUS(self)
+        self.helper = Helper(self)
         self.comm = self.signalManager.comm
 
         self.initComm()
@@ -83,6 +89,8 @@ class Window(FramelessWindow):
         self.comm.beforeOpenFile.connect(self.fileManager.open)
         self.comm.afterOpenFile[dict].connect(self.dataTraveler.loadNewFile)
 
+        self.comm.beforeCut.connect(self.cutManager.cut)
+
         self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
 
         self.comm.beforeCompile.connect(
@@ -96,7 +104,10 @@ class Window(FramelessWindow):
         self.comm.onRun[str].connect(
             lambda assembly: self.comm.afterRun.emit(self.compileController.run(assembly)))
 
-    def initLayout(self):
+        self.comm.clickhelper.connect(self.helper.showMessageBox)
+        self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
+
+    def initLayout(self):#初始化窗口
         self.gridLayout.setSpacing(0)
         self.gridLayout.addWidget(self.navigationInterface, 0, 0, 2, 1)
         self.vBoxLayout.setContentsMargins(0, 32, 0, 0)
@@ -107,7 +118,7 @@ class Window(FramelessWindow):
         self.titleBar.raise_()
         self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)
 
-    def initNavigation(self):
+    def initNavigation(self):#导航栏
         # enable acrylic effect
         self.navigationInterface.setAcrylicEnabled(True)
 
@@ -146,11 +157,11 @@ class Window(FramelessWindow):
         self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)
         self.stackWidget.setCurrentIndex(1)
 
-    def changeTheme(self, isDark: bool):
+    def changeTheme(self, isDark: bool):#转换颜色模式
         setTheme(Theme.DARK if isDark else Theme.LIGHT)
         self.setQss()
 
-    def initWindow(self):
+    def initWindow(self):#初始化窗口
         self.resize(900, 700)
         self.setWindowIcon(QIcon('resource/logo.png'))
         self.setWindowTitle('Pybicc')
@@ -174,7 +185,7 @@ class Window(FramelessWindow):
             tooltip=text
         )
 
-    def setQss(self):
+    def setQss(self):#具体转换颜色
         color = 'dark' if isDarkTheme() else 'light'
         with open(f'resource/{color}/demo.qss', encoding='utf-8') as f:
             self.setStyleSheet(f.read())
@@ -187,7 +198,7 @@ class Window(FramelessWindow):
         self.navigationInterface.setCurrentItem(widget.objectName())
         qrouter.push(self.stackWidget, widget.objectName())
 
-    def showMessageBox(self):
+    def showMessageBox(self):#显示开发者信息
         w = MessageBox(
             'Pybicc💯 v0.2.1',
             'Made With 💖 by UPC-编译原理课设-二组\n\nPowered by PyQt6, PyQt-Fluent-Widgets\n',

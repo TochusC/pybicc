@@ -93,6 +93,7 @@ def new_type(kind, size, align):
 
 def pointer_to(base):
     ty = new_type(TypeKind.TY_PTR, 8, 8)
+    ty.base = base
     return ty
 
 
@@ -105,6 +106,7 @@ def func_type(return_ty):
 def add_type(node):
     if node is None or node.ty is not None:
         return
+
     add_type(node.lhs)
     add_type(node.rhs)
     add_type(node.cond)

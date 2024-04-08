@@ -76,8 +76,10 @@ class MenuBar(CommandBar):
         self.addSeparator()
 
         self.addActions([
-            Action(FluentIcon.HELP, '帮助', shortcut='Ctrl+H'),
-            Action(FluentIcon.FEEDBACK, '关于我们', shortcut='Ctrl+F'),
+            Action(FluentIcon.HELP, '帮助', shortcut='Ctrl+H', triggered=self.comm.clickhelper.emit),
+        ])
+        self.addActions([
+            Action(FluentIcon.FEEDBACK, '关于我们', shortcut='Ctrl+F', triggered=self.comm.clickaboutUS.emit),
         ])
 
         self.addSeparator()

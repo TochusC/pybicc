@@ -1028,7 +1028,7 @@ def new_add(lhs, rhs, tok=tokenize.token):
     elif rhs.ty.base is not None and type.is_integer(lhs.ty):
         return new_binary(NodeKind.ND_PTR_ADD, rhs, lhs, tok)
     else:
-        raise RuntimeError("invalid operands, %s", tok)
+        raise RuntimeError("invalid operands, %s", tok.str)
 
 
 def new_sub(lhs, rhs, tok):

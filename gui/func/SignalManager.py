@@ -23,3 +23,7 @@ class Communicate(QObject):
     afterRun = pyqtSignal(str)
 
     onThemeChange = pyqtSignal(bool)
+    clickaboutUS = pyqtSignal()
+    clickhelper = pyqtSignal()
+    afterCut = pyqtSignal(dict)
+    beforeCut = pyqtSignal()
