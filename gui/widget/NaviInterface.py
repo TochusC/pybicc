@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QApplication, QFrame, QStackedWidget, QHBoxLayout, Q
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, NavigationWidget, MessageBox,
                             isDarkTheme, setTheme, Theme, qrouter, TextEdit, SubtitleLabel, TabBar, FluentIcon,
-                            CaptionLabel)
+                            CaptionLabel, IconWidget)
 from qfluentwidgets import FluentIcon as FIF
 
 from qframelesswindow import FramelessWindow, TitleBar
@@ -74,9 +74,12 @@ class CodeEditor(QFrame):
         self.comm = comm
         self.setObjectName('CodeEditor')
         self.tabBar = TabBar()
+        self.tabBar.setMovable(True)
+        self.tabBar.setScrollable(True)
         self.tabBar.addTab('unnamed.c', 'unnamed.c', FluentIcon.DOCUMENT)
         self.tabBar.currentChanged.connect(self.onTabChanged)
         self.tabBar.tabAddRequested.connect(self.onTabAddRequested)
+        self.tabBar.tabCloseRequested.connect(self.tabBar.removeTab)
 
         self.text_edit = TextEdit(self)
         self.highlighter = CHighlighter(self.text_edit.document())
@@ -87,8 +90,18 @@ class CodeEditor(QFrame):
         self.text_edit.textChanged.connect(lambda: self.comm.onActiveFileChange.emit(self.text_edit.toPlainText()))
         self.comm.afterActiveFileChange[str].connect(self.changeToActiveFile)
 
-    def addTab(self, routeKey, text):
-        self.tabBar.addTab(routeKey, text, FluentIcon.DOCUMENT)
+        self.comm.afterCreateNewFile[str].connect(self.addTab)
+
+        self.comm.afterChangeActiveFile.connect(self.changeTabToActiveFile)
+
+    def changeTabToActiveFile(self, text):
+        filename = text[:-2] + '.c'
+        self.tabBar.setCurrentTab(text)
+
+
+
+    def addTab(self, text):
+        self.tabBar.addTab(text, text, FluentIcon.DOCUMENT)
 
     def changeToActiveFile(self, text):
         if self.text_edit.toPlainText() != text:
@@ -96,11 +109,10 @@ class CodeEditor(QFrame):
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
-        print(objectName)
+        self.comm.beforeChangeActiveFile(objectName)
 
     def onTabAddRequested(self):
-        text = f'硝子酱一级棒卡哇伊×{self.tabBar.count()}'
-        self.addTab(text, text)
+        self.comm.beforeCreateNewFile.emit()
 
 
 class CompileResult(QFrame):
@@ -113,7 +125,9 @@ class CompileResult(QFrame):
         self.tabBar = TabBar()
         self.tabBar.addTab('unnamed.o', 'unnamed.o', FluentIcon.DOCUMENT)
         self.tabBar.currentChanged.connect(self.onTabChanged)
-        self.tabBar.tabAddRequested.connect(self.onTabAddRequested)
+
+        self.tabBar.setMovable(True)
+        self.tabBar.setScrollable(True)
 
         self.text_edit = TextEdit(self)
         self.highlighter = AssemblyHighlighter(self.text_edit.document())
@@ -126,21 +140,19 @@ class CompileResult(QFrame):
         self.text_edit.textChanged.connect(
             lambda: self.comm.onActiveCompileFileChange.emit(self.text_edit.toPlainText()))
         self.comm.afterActiveCompileFileChange[str].connect(self.changeToActiveFile)
+        self.comm.afterCreateNewFile[str].connect(self.addTab)
 
     def changeToActiveFile(self, text):
         if self.text_edit.toPlainText() != text:
             self.text_edit.setText(text)
 
-    def addTab(self, routeKey, text):
-        self.tabBar.addTab(routeKey, text, FluentIcon.DOCUMENT)
+    def addTab(self, text):
+        text = text[:-2] + '.o'
+        self.tabBar.addTab(text, text, FluentIcon.DOCUMENT)
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
         print(objectName)
-
-    def onTabAddRequested(self):
-        text = f'硝子酱一级棒卡哇伊×{self.tabBar.count()}'
-        self.addTab(text, text)
 
 
 class RunResult(QFrame):
@@ -153,16 +165,20 @@ class RunResult(QFrame):
         self.tabBar = TabBar()
         self.tabBar.addTab('unnamed', 'unnamed', FluentIcon.DOCUMENT)
         self.tabBar.currentChanged.connect(self.onTabChanged)
-        self.tabBar.tabAddRequested.connect(self.onTabAddRequested)
+
+        self.tabBar.setMovable(True)
+        self.tabBar.setScrollable(True)
 
         self.text_edit = TextEdit(self)
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.addWidget(self.tabBar)
         self.vBoxLayout.addWidget(self.text_edit)
         self.comm.afterRun[str].connect(self.text_edit.setText)
+        self.comm.afterCreateNewFile[str].connect(self.addTab)
 
-    def addTab(self, routeKey, text):
-        self.tabBar.addTab(routeKey, text, FluentIcon.DOCUMENT)
+    def addTab(self, text):
+        text = text[:-2]
+        self.tabBar.addTab(text, text, FluentIcon.DOCUMENT)
 
     def changeToActiveFile(self, text):
         if self.text_edit.toPlainText() != text:
@@ -171,10 +187,6 @@ class RunResult(QFrame):
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
         print(objectName)
-
-    def onTabAddRequested(self):
-        text = f'硝子酱一级棒卡哇伊×{self.tabBar.count()}'
-        self.addTab(text, text)
 
 
 class Interface(QFrame):

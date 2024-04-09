@@ -109,6 +109,10 @@ class Window(FramelessWindow):
         self.comm.clickhelper.connect(self.helper.showMessageBox)
         self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
 
+        self.comm.beforeCreateNewFile.connect(self.dataTraveler.createNewFile)
+
+        self.comm.beforeChangeActiveFile.connect(self.dataTraveler.changeActiveFile)
+
     def startRun(self, assembly):
         try:
             self.comm.afterRun.emit(self.compileController.run(assembly))
@@ -157,6 +161,7 @@ class Window(FramelessWindow):
             w.cancelButton.setText('关闭')
             if w.exec():
                 pass
+
     def startRun(self, assembly):
         try:
             self.comm.afterRun.emit(self.compileController.run(assembly))
@@ -170,7 +175,7 @@ class Window(FramelessWindow):
             if w.exec():
                 pass
 
-    def initLayout(self):#初始化窗口
+    def initLayout(self):  #初始化窗口
         self.gridLayout.setSpacing(0)
         self.gridLayout.addWidget(self.navigationInterface, 0, 0, 2, 1)
         self.vBoxLayout.setContentsMargins(0, 32, 0, 0)
@@ -181,7 +186,7 @@ class Window(FramelessWindow):
         self.titleBar.raise_()
         self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)
 
-    def initNavigation(self):#导航栏
+    def initNavigation(self):  #导航栏
         # enable acrylic effect
         self.navigationInterface.setAcrylicEnabled(True)
 
@@ -220,11 +225,11 @@ class Window(FramelessWindow):
         self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)
         self.stackWidget.setCurrentIndex(1)
 
-    def changeTheme(self, isDark: bool):#转换颜色模式
+    def changeTheme(self, isDark: bool):  #转换颜色模式
         setTheme(Theme.DARK if isDark else Theme.LIGHT)
         self.setQss()
 
-    def initWindow(self):#初始化窗口
+    def initWindow(self):  #初始化窗口
         self.resize(900, 700)
         self.setWindowIcon(QIcon('resource/logo.png'))
         self.setWindowTitle('Pybicc')
@@ -248,7 +253,7 @@ class Window(FramelessWindow):
             tooltip=text
         )
 
-    def setQss(self):#具体转换颜色
+    def setQss(self):  #具体转换颜色
         color = 'dark' if isDarkTheme() else 'light'
         with open(f'resource/{color}/demo.qss', encoding='utf-8') as f:
             self.setStyleSheet(f.read())
@@ -261,7 +266,7 @@ class Window(FramelessWindow):
         self.navigationInterface.setCurrentItem(widget.objectName())
         qrouter.push(self.stackWidget, widget.objectName())
 
-    def showMessageBox(self):#显示开发者信息
+    def showMessageBox(self):  #显示开发者信息
         w = MessageBox(
             'Pybicc💯 v0.2.1',
             'Made With 💖 by UPC-编译原理课设-二组\n\nPowered by PyQt6, PyQt-Fluent-Widgets\n',

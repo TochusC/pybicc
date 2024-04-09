@@ -35,3 +35,9 @@ class Communicate(QObject):
     beforeCut = pyqtSignal()
 
     requestInput = pyqtSignal()
+
+    beforeCreateNewFile = pyqtSignal()
+    afterCreateNewFile = pyqtSignal(str)
+
+    beforeChangeActiveFile = pyqtSignal(str)
+    afterChangeActiveFile = pyqtSignal(str)

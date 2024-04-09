@@ -1,5 +1,6 @@
 class DataTraveler:
     def __init__(self, parent):
+        self.unnamedFileCount = 0
         self.parent = parent
         self.currentFileContent = ''
         self.fileList = self.FileList()
@@ -34,6 +35,30 @@ class DataTraveler:
     def updateAssembly(self, assembly):
         self.compileFileList.changeActiveFileContent(assembly)
         self.parent.comm.afterActiveCompileFileChange.emit(self.resultFileList.getActiveFile()['data'])
+
+    def changeActiveFile(self, filename):
+        codeFileName = filename[:-2] + '.c'
+        compileFileName = filename[:-2] + '.o'
+        resultFileName = filename[:-2]
+
+        for i in range(self.fileList.fileCount):
+            if self.fileList.getFile(i)['filename'] == codeFileName:
+                self.fileList.changeActiveFile(i)
+        for i in range(self.compileFileList.fileCount):
+            if self.compileFileList.getFile(i)['filename'] == compileFileName:
+                self.compileFileList.changeActiveFile(i)
+        for i in range(self.resultFileList.fileCount):
+            if self.resultFileList.getFile(i)['filename'] == resultFileName:
+                self.resultFileList.changeActiveFile(i)
+
+        self.parent.comm.afterChangeActiveFile.emit(filename)
+
+
+    def createNewFile(self):
+        self.unnamedFileCount += 1
+        newFile = f'unnamed{self.unnamedFileCount}.c'
+        self.fileList.addFile(f'unnamed{self.unnamedFileCount}.c', '')
+        self.parent.comm.afterCreateNewFile.emit(newFile)
 
     class CompileFileList:
         def __init__(self):
