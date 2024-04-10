@@ -6,9 +6,6 @@ from qfluentwidgets import CommandBar, FluentIcon, Action, RoundMenu, Transparen
 from gui.func.FileManager import FileManager
 
 
-
-
-
 class MenuBar(CommandBar):
     def __init__(self, parent=None, comm=None):
         super().__init__(parent)
@@ -18,41 +15,31 @@ class MenuBar(CommandBar):
         setFont(fileButton, 12)
         menu = RoundMenu(parent=self)
         menu.addActions([
-            Action(FluentIcon.ADD, '新建', shortcut='Ctrl+N'),
+            Action(FluentIcon.ADD, '新建', shortcut='Ctrl+N'
+                   , triggered=self.comm.beforeCreateNewFile.emit
+                   ),
             Action(FluentIcon.DOCUMENT, '打开',
                    shortcut='Ctrl+O',
                    triggered=self.comm.beforeOpenFile.emit
                    ),
-            Action(FluentIcon.SAVE, '保存', shortcut='Ctrl+S'),
-            Action(FluentIcon.SAVE_AS, '另存为', shortcut='Ctrl+Shift+S'),
-            Action(FluentIcon.PRINT, '打印', shortcut='Ctrl+P'),
-            Action(FluentIcon.CLOSE, '关闭', shortcut='Ctrl+W'),
+            Action(FluentIcon.SAVE, '保存',
+                   shortcut='Ctrl+S',
+                   triggered=self.comm.beforeSaveFile.emit,
+                   ),
+            Action(FluentIcon.CLOSE, '关闭', shortcut='Ctrl+W', triggered=self.comm.beforeClose.emit),
         ])
         fileButton.setMenu(menu)
         self.addWidget(fileButton)
 
-        editButton = TransparentDropDownPushButton(FluentIcon.EDIT, '编辑')
-        editButton.setFixedHeight(34)
-        setFont(editButton, 12)
-        menu = RoundMenu(parent=self)
-        menu.addActions([
-            Action(FluentIcon.COPY, '复制'),
-            Action(FluentIcon.CUT, '剪切'),
-            Action(FluentIcon.PASTE, '粘贴'),
-            Action(FluentIcon.CANCEL, '取消'),
-            Action('全选'),
-        ])
-        editButton.setMenu(menu)
-        self.addWidget(editButton)
 
         viewButton = TransparentDropDownPushButton(FluentIcon.VIEW, '视图')
         viewButton.setFixedHeight(34)
         setFont(viewButton, 12)
         menu = RoundMenu(parent=self)
         menu.addActions([
-            Action(FluentIcon.ZOOM_IN, '放大'),
-            Action(FluentIcon.ZOOM_OUT, '缩小'),
-            Action(FluentIcon.FIT_PAGE, '适应窗口'),
+            Action(FluentIcon.ZOOM_IN, '放大', shortcut='Ctrl+Plus', triggered=self.comm.enlargeWindow.emit),
+            Action(FluentIcon.ZOOM_OUT, '缩小', shortcut='Ctrl+Minus', triggered=self.comm.reduceWindow.emit),
+            Action(FluentIcon.FIT_PAGE, '适应窗口', shortcut='Ctrl+0', triggered=self.comm.fitWindow.emit),
         ])
         viewButton.setMenu(menu)
         self.addWidget(viewButton)
@@ -62,13 +49,15 @@ class MenuBar(CommandBar):
         setFont(runButton, 12)
         menu = RoundMenu(parent=self)
         menu.addActions([
-            Action(FluentIcon.CODE, '编译',
+            Action(FluentIcon.CODE, '编译', shortcut='F6',
                    triggered=self.comm.beforeCompile.emit
                    ),
-            Action(FluentIcon.COMMAND_PROMPT, '运行',
+            Action(FluentIcon.COMMAND_PROMPT, '运行', shortcut='F7',
                    triggered=self.comm.beforeRun.emit
                    ),
-            Action(FluentIcon.ASTERISK, '编译并运行'),
+            Action(FluentIcon.ASTERISK, '编译并运行', shortcut='F5',
+                   triggered=self.comm.beforeCompileAndRun.emit
+                   ),
         ])
         runButton.setMenu(menu)
         self.addWidget(runButton)

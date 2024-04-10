@@ -44,3 +44,16 @@ class Communicate(QObject):
 
     beforeRemoveFile = pyqtSignal(str)
     afterRemoveFile = pyqtSignal(str)
+
+    changeTokenizeResult = pyqtSignal(str)
+    changeParseResult = pyqtSignal(str)
+
+    beforeCompileAndRun = pyqtSignal()
+
+    enlargeWindow = pyqtSignal()
+    reduceWindow = pyqtSignal()
+    fitWindow = pyqtSignal()
+
+    beforeSaveFile = pyqtSignal()
+
+    beforeClose = pyqtSignal()

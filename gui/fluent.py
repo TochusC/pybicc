@@ -1,12 +1,17 @@
 # coding:utf-8
 import sys
+import time
+import ctypes
+
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Pybicc")
+
 from PyQt6.QtCore import Qt, QUrl, QSize, QEventLoop, QTimer
 from PyQt6.QtGui import QIcon, QDesktopServices, QAction
 from PyQt6.QtWidgets import QApplication, QStackedWidget, QGridLayout, QMenu, QVBoxLayout, QFileDialog
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, MessageBox,
                             isDarkTheme, qrouter, SplashScreen, setTheme, Theme, SubtitleLabel, LineEdit,
-                            MessageBoxBase)
+                            MessageBoxBase, StateToolTip, FlyoutView, PushButton, Flyout)
 from qfluentwidgets import FluentIcon as FIF
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
@@ -18,7 +23,7 @@ from gui.func.AboutUS import AboutUS
 from gui.func.Helper import Helper
 from gui.func.CutManager import CutManager
 from gui.widget.MenuBar import MenuBar
-from gui.widget.NaviInterface import CompileInterface, OverviewInterface, RunInterface, Widget, \
+from gui.widget.NaviInterface import TokenizeInterface, OverviewInterface, ParseInterface, Widget, \
     AvatarWidget
 
 
@@ -63,13 +68,16 @@ class Window(FramelessWindow):
             self, showMenuButton=True, showReturnButton=True)
         self.stackWidget = QStackedWidget(self)
 
+        self.stateTooltip = None
+        self.settingButton = None
+
         # 创建子界面
-        self.compileInterface = CompileInterface(self, self.comm)
+        self.tokenizeInterface = TokenizeInterface(self, self.comm)
         self.overviewInterface = OverviewInterface(self, self.comm)
-        self.runInterface = RunInterface(self, self.comm)
+        self.parseInterface = ParseInterface(self, self.comm)
 
         self.folderInterface = Widget('Folder Interface', self)
-        self.settingInterface = Widget('Setting Interface', self)
+        # self.settingInterface = Widget('Setting Interface', self)
 
         # 显示启动画面
         self.menuBar = MenuBar(self, comm=self.comm)
@@ -115,6 +123,45 @@ class Window(FramelessWindow):
         self.comm.beforeChangeActiveFile[str].connect(self.dataTraveler.changeActiveFile)
 
         self.comm.beforeRemoveFile[str].connect(self.dataTraveler.removeFile)
+
+        self.comm.beforeCompileAndRun.connect(self.compileAndRun)
+
+        self.comm.enlargeWindow.connect(self.enlargeWindow)
+        self.comm.reduceWindow.connect(self.reduceWindow)
+        self.comm.fitWindow.connect(self.resetWindow)
+
+        self.comm.beforeSaveFile.connect(self.saveFile)
+
+        self.comm.beforeClose.connect(self.close)
+
+    def saveFile(self):
+        try:
+            filename, type = QFileDialog.getSaveFileName(self, '保存文件', '', 'C文件(*.c);;汇编文件(*.o);;运行结果(*.txt)')
+            if type == 'C文件(*.c)':
+                data = self.dataTraveler.getActiveFileContent()
+            elif type == '汇编文件(*.o)':
+                data = self.dataTraveler.getAssembly()
+            elif type == '运行结果(*.txt)':
+                data = self.dataTraveler.getResult()
+            self.fileManager.save(filename, data)
+
+        except Exception as e:
+            w = MessageBox(
+                '发生错误！❌',
+                f'保存错误：{e}',
+                self
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
+
+    def compileAndRun(self):
+        self.stateTooltip = StateToolTip('正在编译', "请耐心等待", self)
+        self.stateTooltip.show()
+        self.startCompile(self.dataTraveler.getActiveFileContent())
+        time.sleep(0.5)
+        self.startRun(self.dataTraveler.getAssembly())
+        self.stateTooltip.close()
 
     def startRun(self, assembly):
         try:
@@ -193,9 +240,9 @@ class Window(FramelessWindow):
         # enable acrylic effect
         self.navigationInterface.setAcrylicEnabled(True)
 
-        self.addSubInterface(self.compileInterface, FIF.CODE, '编译')
+        self.addSubInterface(self.tokenizeInterface, FIF.CODE, '词法分析')
         self.addSubInterface(self.overviewInterface, FIF.LAYOUT, '总览')
-        self.addSubInterface(self.runInterface, FIF.COMMAND_PROMPT, '运行')
+        self.addSubInterface(self.parseInterface, FIF.COMMAND_PROMPT, '语法分析')
 
         self.navigationInterface.addSeparator()
 
@@ -217,7 +264,15 @@ class Window(FramelessWindow):
             position=NavigationItemPosition.BOTTOM
         )
 
-        self.addSubInterface(self.settingInterface, FIF.SETTING, 'Settings', NavigationItemPosition.BOTTOM)
+        self.settingButton = self.navigationInterface.addItem(
+            routeKey="setting",  #设置
+            icon=FIF.SETTING,
+            text="设置",
+            onClick=self.showSetting,
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="设置"
+        )
+
 
         # !IMPORTANT: don't forget to set the default route key
         qrouter.setDefaultRouteKey(self.stackWidget, self.overviewInterface.objectName())
@@ -227,6 +282,32 @@ class Window(FramelessWindow):
 
         self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)
         self.stackWidget.setCurrentIndex(1)
+
+    def showSetting(self):
+        try:
+            view = FlyoutView(
+                title='Pybicc',
+                content="好像没什么可以设置的...",
+                image='resource/logo.png',
+                isClosable=True
+            )
+
+            # add button to view
+            button = PushButton('好的')
+            button.clicked.connect(view.close)
+            button.setFixedWidth(120)
+            view.addWidget(button)
+
+            # adjust layout (optional)
+            view.widgetLayout.insertSpacing(1, 5)
+            view.widgetLayout.addSpacing(5)
+
+            # show view
+            w = Flyout.make(view, self.settingButton, self)
+            view.closed.connect(w.close)
+        except Exception as e:
+            print(e)
+
 
     def changeTheme(self, isDark: bool):  #转换颜色模式
         setTheme(Theme.DARK if isDark else Theme.LIGHT)
@@ -243,6 +324,21 @@ class Window(FramelessWindow):
         self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
 
         self.setQss()
+
+    def enlargeWindow(self):
+        current_size = self.size()  # 获取当前窗口大小
+        new_width = current_size.width() * 1.1  # 增大宽度
+        new_height = current_size.height() * 1.1  # 增大高度
+        self.resize(int(new_width), int(new_height))  # 设置新的窗口大小
+
+    def reduceWindow(self):
+        current_size = self.size()
+        new_width = current_size.width() * 0.9
+        new_height = current_size.height() * 0.9
+        self.resize(int(new_width), int(new_height))  # 设置新的窗口大小
+
+    def resetWindow(self):
+        self.resize(900, 700)
 
     def addSubInterface(self, interface, icon, text: str, position=NavigationItemPosition.TOP):
         """ add sub interface """

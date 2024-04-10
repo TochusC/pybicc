@@ -7,6 +7,7 @@ class DataTraveler:
         self.compileFileList = self.FileList([{'filename': 'unnamed.o', 'data': ''}])
         self.resultFileList = self.FileList([{'filename': 'unnamed', 'data': ''}])
 
+
     def loadNewFile(self, fileDict):
         self.fileList.addFile(fileDict['filename'], fileDict['data'])
         self.compileFileList.addFile(fileDict['filename'][:-2] + '.o', '')
@@ -34,6 +35,9 @@ class DataTraveler:
 
     def getAssembly(self):
         return self.compileFileList.getActiveFile()['data']
+
+    def getResult(self):
+        return self.resultFileList.getActiveFile()['data']
 
     def updateAssembly(self, assembly):
         self.compileFileList.changeActiveFileContent(assembly)

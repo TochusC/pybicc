@@ -1,17 +1,22 @@
-from compiler import interpreter, tokenize, codegen, parse
-from compiler.utils import align_to
-
-
+from compiler import interpreter, tokenize, codegen, parse, utils
 
 
 class CompileController:
     def __init__(self, parent):
         self.parent = parent
 
-
     def compile(self, code):
         tokenize.token = tokenize.tokenize(code)
+
+        utils.save_tokenize_result(tokenize.token)
+        tokenize_result = utils.tokenize_result
+        self.parent.comm.changeTokenizeResult.emit(tokenize_result)
+
         parse.prog = parse.program()
+        utils.save_parse_result(parse.prog)
+        parse_result = utils.parse_result
+        self.parent.comm.changeParseResult.emit(parse_result)
+
         fn = parse.prog.fns
         while fn is not None:
             offset = 0
@@ -20,7 +25,7 @@ class CompileController:
                 offset += vl.var.ty.size
                 vl.var.offset = offset
                 vl = vl.next
-            fn.stack_size = align_to(offset, 8)
+            fn.stack_size = utils.align_to(offset, 8)
             fn = fn.next
         return codegen.codegen(parse.prog)
 

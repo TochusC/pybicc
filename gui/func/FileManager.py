@@ -14,3 +14,7 @@ class FileManager:
             with open(filename[0], 'r') as f:
                 data = f.read()
                 self.parent.comm.afterOpenFile.emit({'filename': filename[0], 'data': data})
+
+    def save(self, filename, data):
+        with open(filename, 'w') as f:
+            f.write(data)
