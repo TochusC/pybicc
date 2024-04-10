@@ -106,11 +106,9 @@ class CodeEditor(QFrame):
         self.tabBar.removeTab(index)
         self.comm.beforeRemoveFile.emit(filename)
 
-
     def changeTabToActiveFile(self, text):
         filename = text[:-2] + '.c'
         self.tabBar.setCurrentTab(filename)
-
 
     def addTab(self, text):
         self.tabBar.addTab(text, text, FluentIcon.DOCUMENT)
@@ -222,7 +220,6 @@ class RunResult(QFrame):
         filename = filename[:-2]
         self.tabBar.removeTabByKey(filename)
 
-
     def changeTabToActiveFile(self, text):
         filename = text[:-2]
         self.tabBar.setCurrentTab(filename)
@@ -239,6 +236,42 @@ class RunResult(QFrame):
         objectName = self.tabBar.currentTab().routeKey()
 
 
+class TokenizeResult(QFrame):
+    """ TokenizeResult """
+
+    def __init__(self, parent=None, comm=None):
+        super().__init__(parent)
+        self.comm = comm
+        self.setObjectName('TokenizeResult')
+        self.tabBar = TabBar()
+        self.tabBar.addTab('Tokenize', 'Tokenize', FluentIcon.DOCUMENT)
+
+        self.text_edit = TextEdit(self)
+        self.text_edit.setReadOnly(True)
+        self.vBoxLayout = QVBoxLayout(self)
+        self.vBoxLayout.addWidget(self.tabBar)
+        self.vBoxLayout.addWidget(self.text_edit)
+        self.comm.changeTokenizeResult[str].connect(self.text_edit.setText)
+
+
+class ParseResult(QFrame):
+    """ ParseResult """
+
+    def __init__(self, parent=None, comm=None):
+        super().__init__(parent)
+        self.comm = comm
+        self.setObjectName('ParseResult')
+        self.tabBar = TabBar()
+        self.tabBar.addTab('Parse', 'Parse', FluentIcon.DOCUMENT)
+
+        self.text_edit = TextEdit(self)
+        self.text_edit.setReadOnly(True)
+        self.vBoxLayout = QVBoxLayout(self)
+        self.vBoxLayout.addWidget(self.tabBar)
+        self.vBoxLayout.addWidget(self.text_edit)
+        self.comm.changeParseResult[str].connect(self.text_edit.setText)
+
+
 class Interface(QFrame):
     def __init__(self, parent, name):
         super().__init__(parent)
@@ -246,19 +279,18 @@ class Interface(QFrame):
         self.setObjectName(name)
 
 
-class CompileInterface(Interface):
+class TokenizeInterface(Interface):
     """ Compile interface """
 
     def __init__(self, parent=None, comm=None):
         super().__init__(parent, 'CompileInterface')
         self.comm = comm
         self.codeEditor = CodeEditor(self, comm)
-        self.compileResult = CompileResult(self, comm)
-        self.vBoxLayout = QVBoxLayout(self)
-        self.vBoxLayout.addWidget(self.codeEditor)
-        self.vBoxLayout.setStretch(0, 3)
-        self.vBoxLayout.addWidget(self.compileResult)
-        self.vBoxLayout.setStretch(1, 2)
+        self.tokenizeResult = TokenizeResult(self, comm)
+        self.hBoxLayout = QHBoxLayout(self)
+        self.hBoxLayout.addWidget(self.codeEditor)
+        self.hBoxLayout.addWidget(self.tokenizeResult)
+
 
 
 class OverviewInterface(Interface):
@@ -278,16 +310,14 @@ class OverviewInterface(Interface):
         self.grid_layout.addWidget(self.runResult, 1, 0, 1, 2)
 
 
-class RunInterface(Interface):
+class ParseInterface(Interface):
     """ Run interface """
 
     def __init__(self, parent=None, comm=None):
         super().__init__(parent, 'RunInterface')
         self.comm = comm
         self.codeEditor = CodeEditor(self, comm)
-        self.runResult = RunResult(self, comm)
-        self.vBoxLayout = QVBoxLayout(self)
-        self.vBoxLayout.addWidget(self.codeEditor)
-        self.vBoxLayout.addWidget(self.runResult)
-        self.vBoxLayout.setStretch(0, 3)
-        self.vBoxLayout.setStretch(1, 2)
+        self.parseResult = ParseResult(self, comm)
+        self.hBoxLayout = QHBoxLayout(self)
+        self.hBoxLayout.addWidget(self.codeEditor)
+        self.hBoxLayout.addWidget(self.parseResult)
