@@ -41,3 +41,6 @@ class Communicate(QObject):
 
     beforeChangeActiveFile = pyqtSignal(str)
     afterChangeActiveFile = pyqtSignal(str)
+
+    beforeRemoveFile = pyqtSignal(str)
+    afterRemoveFile = pyqtSignal(str)

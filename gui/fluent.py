@@ -105,13 +105,16 @@ class Window(FramelessWindow):
         self.comm.beforeRun.connect(
             lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
         self.comm.onRun[str].connect(self.startRun)
+        self.comm.afterRun[str].connect(self.dataTraveler.updateResult)
 
         self.comm.clickhelper.connect(self.helper.showMessageBox)
         self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
 
         self.comm.beforeCreateNewFile.connect(self.dataTraveler.createNewFile)
 
-        self.comm.beforeChangeActiveFile.connect(self.dataTraveler.changeActiveFile)
+        self.comm.beforeChangeActiveFile[str].connect(self.dataTraveler.changeActiveFile)
+
+        self.comm.beforeRemoveFile[str].connect(self.dataTraveler.removeFile)
 
     def startRun(self, assembly):
         try:

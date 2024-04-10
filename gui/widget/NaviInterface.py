@@ -79,7 +79,7 @@ class CodeEditor(QFrame):
         self.tabBar.addTab('unnamed.c', 'unnamed.c', FluentIcon.DOCUMENT)
         self.tabBar.currentChanged.connect(self.onTabChanged)
         self.tabBar.tabAddRequested.connect(self.onTabAddRequested)
-        self.tabBar.tabCloseRequested.connect(self.tabBar.removeTab)
+        self.tabBar.tabCloseRequested.connect(self.removeTab)
 
         self.text_edit = TextEdit(self)
         self.highlighter = CHighlighter(self.text_edit.document())
@@ -94,10 +94,22 @@ class CodeEditor(QFrame):
 
         self.comm.afterChangeActiveFile.connect(self.changeTabToActiveFile)
 
+        self.comm.afterOpenFile.connect(self.addNewFile)
+
+    def addNewFile(self, file_dict):
+        filename = file_dict['filename']
+        self.tabBar.addTab(filename, filename, FluentIcon.DOCUMENT)
+        self.tabBar.setCurrentTab(filename)
+
+    def removeTab(self, index):
+        filename = self.tabBar.tabText(index)
+        self.tabBar.removeTab(index)
+        self.comm.beforeRemoveFile.emit(filename)
+
+
     def changeTabToActiveFile(self, text):
         filename = text[:-2] + '.c'
-        self.tabBar.setCurrentTab(text)
-
+        self.tabBar.setCurrentTab(filename)
 
 
     def addTab(self, text):
@@ -109,7 +121,7 @@ class CodeEditor(QFrame):
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
-        self.comm.beforeChangeActiveFile(objectName)
+        self.comm.beforeChangeActiveFile.emit(objectName)
 
     def onTabAddRequested(self):
         self.comm.beforeCreateNewFile.emit()
@@ -142,6 +154,24 @@ class CompileResult(QFrame):
         self.comm.afterActiveCompileFileChange[str].connect(self.changeToActiveFile)
         self.comm.afterCreateNewFile[str].connect(self.addTab)
 
+        self.comm.afterChangeActiveFile.connect(self.changeTabToActiveFile)
+
+        self.comm.afterOpenFile.connect(self.addNewFile)
+        self.comm.afterRemoveFile.connect(self.removeFile)
+
+    def removeFile(self, filename):
+        filename = filename[:-2] + '.o'
+        self.tabBar.removeTabByKey(filename)
+
+    def addNewFile(self, file_dict):
+        filename = file_dict['filename'][0:-2] + '.o'
+        self.tabBar.addTab(filename, filename, FluentIcon.DOCUMENT)
+        self.tabBar.setCurrentTab(filename)
+
+    def changeTabToActiveFile(self, text):
+        filename = text[:-2] + '.o'
+        self.tabBar.setCurrentTab(filename)
+
     def changeToActiveFile(self, text):
         if self.text_edit.toPlainText() != text:
             self.text_edit.setText(text)
@@ -152,7 +182,6 @@ class CompileResult(QFrame):
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
-        print(objectName)
 
 
 class RunResult(QFrame):
@@ -170,11 +199,33 @@ class RunResult(QFrame):
         self.tabBar.setScrollable(True)
 
         self.text_edit = TextEdit(self)
+        self.text_edit.setReadOnly(True)
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.addWidget(self.tabBar)
         self.vBoxLayout.addWidget(self.text_edit)
         self.comm.afterRun[str].connect(self.text_edit.setText)
+
         self.comm.afterCreateNewFile[str].connect(self.addTab)
+
+        self.comm.afterChangeActiveFile.connect(self.changeTabToActiveFile)
+        self.comm.afterActiveResultFileChange[str].connect(self.changeToActiveFile)
+
+        self.comm.afterOpenFile.connect(self.addNewFile)
+        self.comm.afterRemoveFile.connect(self.removeFile)
+
+    def addNewFile(self, file_dict):
+        filename = file_dict['filename'][0:-2]
+        self.tabBar.addTab(filename, filename, FluentIcon.DOCUMENT)
+        self.tabBar.setCurrentTab(filename)
+
+    def removeFile(self, filename):
+        filename = filename[:-2]
+        self.tabBar.removeTabByKey(filename)
+
+
+    def changeTabToActiveFile(self, text):
+        filename = text[:-2]
+        self.tabBar.setCurrentTab(filename)
 
     def addTab(self, text):
         text = text[:-2]
@@ -186,7 +237,6 @@ class RunResult(QFrame):
 
     def onTabChanged(self, index: int):
         objectName = self.tabBar.currentTab().routeKey()
-        print(objectName)
 
 
 class Interface(QFrame):
