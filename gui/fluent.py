@@ -24,7 +24,7 @@ from gui.func.Helper import Helper
 from gui.func.CutManager import CutManager
 from gui.widget.MenuBar import MenuBar
 from gui.widget.NaviInterface import TokenizeInterface, OverviewInterface, ParseInterface, Widget, \
-    AvatarWidget
+    AvatarWidget, FileInterface
 
 
 class Window(FramelessWindow):
@@ -75,9 +75,7 @@ class Window(FramelessWindow):
         self.tokenizeInterface = TokenizeInterface(self, self.comm)
         self.overviewInterface = OverviewInterface(self, self.comm)
         self.parseInterface = ParseInterface(self, self.comm)
-
-        self.folderInterface = Widget('Folder Interface', self)
-        # self.settingInterface = Widget('Setting Interface', self)
+        self.fileInterface = FileInterface(self, self.comm)
 
         # 显示启动画面
         self.menuBar = MenuBar(self, comm=self.comm)
@@ -93,46 +91,59 @@ class Window(FramelessWindow):
         self.splashScreen.finish()
 
     def initComm(self):
-        self.comm.onThemeChange.connect(self.changeTheme)
+        try:
+            self.comm.onThemeChange.connect(self.changeTheme)
 
-        self.comm.beforeOpenFile.connect(self.fileManager.open)
-        self.comm.afterOpenFile[dict].connect(self.dataTraveler.loadNewFile)
+            self.comm.beforeOpenFile.connect(self.fileManager.open)
+            self.comm.onOpenFile[str].connect(self.openFile)
+            self.comm.afterOpenFile[dict].connect(self.dataTraveler.loadNewFile)
 
-        self.comm.beforeCut.connect(self.cutManager.cut)
+            self.comm.beforeCut.connect(self.cutManager.cut)
 
-        self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
-        self.comm.onActiveCompileFileChange[str].connect(self.dataTraveler.changeActiveCompileFileContent)
+            self.comm.onActiveFileChange[str].connect(self.dataTraveler.changeActiveFileContent)
+            self.comm.onActiveCompileFileChange[str].connect(self.dataTraveler.changeActiveCompileFileContent)
 
-        self.comm.beforeCompile.connect(
-            lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
+            self.comm.beforeCompile.connect(
+                lambda: self.comm.onCompile.emit(self.dataTraveler.getActiveFileContent()))
 
-        self.comm.onCompile[str].connect(self.startCompile)
+            self.comm.onCompile[str].connect(self.startCompile)
 
-        self.comm.afterCompile[str].connect(self.dataTraveler.updateAssembly)
+            self.comm.afterCompile[str].connect(self.dataTraveler.updateAssembly)
 
-        self.comm.beforeRun.connect(
-            lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
-        self.comm.onRun[str].connect(self.startRun)
-        self.comm.afterRun[str].connect(self.dataTraveler.updateResult)
+            self.comm.beforeRun.connect(
+                lambda: self.comm.onRun.emit(self.dataTraveler.getAssembly()))
+            self.comm.onRun[str].connect(self.startRun)
+            self.comm.afterRun[str].connect(self.dataTraveler.updateResult)
 
-        self.comm.clickhelper.connect(self.helper.showMessageBox)
-        self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
+            self.comm.clickhelper.connect(self.helper.showMessageBox)
+            self.comm.clickaboutUS.connect(self.aboutus.showMessageBox)
 
-        self.comm.beforeCreateNewFile.connect(self.dataTraveler.createNewFile)
+            self.comm.beforeCreateNewFile.connect(self.dataTraveler.createNewFile)
 
-        self.comm.beforeChangeActiveFile[str].connect(self.dataTraveler.changeActiveFile)
+            self.comm.beforeChangeActiveFile[str].connect(self.dataTraveler.changeActiveFile)
 
-        self.comm.beforeRemoveFile[str].connect(self.dataTraveler.removeFile)
+            self.comm.beforeRemoveFile[str].connect(self.dataTraveler.removeFile)
 
-        self.comm.beforeCompileAndRun.connect(self.compileAndRun)
+            self.comm.beforeCompileAndRun.connect(self.compileAndRun)
 
-        self.comm.enlargeWindow.connect(self.enlargeWindow)
-        self.comm.reduceWindow.connect(self.reduceWindow)
-        self.comm.fitWindow.connect(self.resetWindow)
+            self.comm.enlargeWindow.connect(self.enlargeWindow)
+            self.comm.reduceWindow.connect(self.reduceWindow)
+            self.comm.fitWindow.connect(self.resetWindow)
 
-        self.comm.beforeSaveFile.connect(self.saveFile)
+            self.comm.beforeSaveFile.connect(self.saveFile)
 
-        self.comm.beforeClose.connect(self.close)
+            self.comm.beforeClose.connect(self.close)
+        except Exception as e:
+            w = MessageBox(
+                '发生错误！❌',
+                f'未知错误：{e}',
+                self
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
+
+
 
     def saveFile(self):
         try:
@@ -162,6 +173,18 @@ class Window(FramelessWindow):
         time.sleep(0.5)
         self.startRun(self.dataTraveler.getAssembly())
         self.stateTooltip.close()
+
+    def openFile(self, filename):
+        self.fileManager.open_file(filename)
+        w = MessageBox(
+            '已打开.c代码文件✅！',
+            filename,
+            self
+        )
+        w.yesButton.setText('确定')
+        w.cancelButton.setText('取消')
+        if w.exec():
+            pass
 
     def startRun(self, assembly):
         try:
@@ -240,21 +263,13 @@ class Window(FramelessWindow):
         # enable acrylic effect
         self.navigationInterface.setAcrylicEnabled(True)
 
-        self.addSubInterface(self.tokenizeInterface, FIF.CODE, '词法分析')
-        self.addSubInterface(self.overviewInterface, FIF.LAYOUT, '总览')
-        self.addSubInterface(self.parseInterface, FIF.COMMAND_PROMPT, '语法分析')
+        self.addSubInterface(self.overviewInterface, FIF.LAYOUT, '总览视图')
+        self.addSubInterface(self.tokenizeInterface, FIF.LANGUAGE, '词法分析')
+        self.addSubInterface(self.parseInterface, FIF.CODE, '语法分析')
 
         self.navigationInterface.addSeparator()
 
-        self.addSubInterface(self.folderInterface, FIF.FOLDER, 'Folder library', NavigationItemPosition.SCROLL)
-        # for i in range(1, 21):
-        #     self.navigationInterface.addItem(
-        #         f'folder{i}',
-        #         FIF.FOLDER,
-        #         f'Folder {i}',
-        #         lambda: print('Folder clicked'),
-        #         position=NavigationItemPosition.SCROLL
-        #     )
+        self.addSubInterface(self.fileInterface, FIF.FOLDER, '文件管理', )
 
         # add custom widget to bottom
         self.navigationInterface.addWidget(
@@ -281,7 +296,8 @@ class Window(FramelessWindow):
         self.navigationInterface.setExpandWidth(300)
 
         self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)
-        self.stackWidget.setCurrentIndex(1)
+        self.navigationInterface.setCurrentItem(self.overviewInterface.objectName())
+        self.stackWidget.setCurrentIndex(0)
 
     def showSetting(self):
         try:

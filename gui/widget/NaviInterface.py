@@ -1,12 +1,13 @@
+import os
 import sys
 from PyQt6.QtCore import Qt, QRect, QUrl
-from PyQt6.QtGui import QIcon, QPainter, QImage, QBrush, QColor, QFont, QDesktopServices
+from PyQt6.QtGui import QIcon, QPainter, QImage, QBrush, QColor, QFont, QDesktopServices, QFileSystemModel
 from PyQt6.QtWidgets import QApplication, QFrame, QStackedWidget, QHBoxLayout, QLabel, QVBoxLayout, \
     QGridLayout
 
 from qfluentwidgets import (NavigationInterface, NavigationItemPosition, NavigationWidget, MessageBox,
                             isDarkTheme, setTheme, Theme, qrouter, TextEdit, SubtitleLabel, TabBar, FluentIcon,
-                            CaptionLabel, IconWidget)
+                            CaptionLabel, IconWidget, TreeView, RoundMenu, Action)
 from qfluentwidgets import FluentIcon as FIF
 
 from qframelesswindow import FramelessWindow, TitleBar
@@ -292,7 +293,6 @@ class TokenizeInterface(Interface):
         self.hBoxLayout.addWidget(self.tokenizeResult)
 
 
-
 class OverviewInterface(Interface):
     """ Overview interface """
 
@@ -321,3 +321,35 @@ class ParseInterface(Interface):
         self.hBoxLayout = QHBoxLayout(self)
         self.hBoxLayout.addWidget(self.codeEditor)
         self.hBoxLayout.addWidget(self.parseResult)
+
+
+class FileInterface(Interface):
+    def __init__(self, parent=None, comm=None):
+        super().__init__(parent, 'FileInterface')
+        self.comm = comm
+        self.view = TreeView(self)
+        model = QFileSystemModel()
+        model.setRootPath(os.getcwd())
+        self.view.setModel(model)
+
+        self.view.doubleClicked.connect(self.onItemClicked)
+
+
+        menu = RoundMenu(parent=self)
+        menu.addAction(Action(FluentIcon.COPY, '复制', triggered=lambda: print("复制成功")))
+
+        self.view.setBorderVisible(True)
+        self.view.setBorderRadius(8)
+
+        self.hBoxLayout = QHBoxLayout(self)
+        self.hBoxLayout.addWidget(self.view)
+
+    def onItemClicked(self, index):
+        model = index.model()  # 获取点击项所属的模型
+        file_path = model.filePath(index)  # 获取点击项的文件路径
+        if os.path.isfile(file_path) and file_path.endswith('.c'):
+            try:
+                self.comm.onOpenFile.emit(file_path)
+            except Exception as e:
+                print(e)
+

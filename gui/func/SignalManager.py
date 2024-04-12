@@ -9,6 +9,7 @@ class SignalManager:
 
 class Communicate(QObject):
     beforeOpenFile = pyqtSignal()
+    onOpenFile = pyqtSignal(str)
     afterOpenFile = pyqtSignal(dict)
 
     onActiveFileChange = pyqtSignal(str)
