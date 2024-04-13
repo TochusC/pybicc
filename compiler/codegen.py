@@ -222,7 +222,7 @@ def gen(node):
         return code
     elif node.kind == parse.NodeKind.ND_EXPR_STMT:
         gen(node.lhs)
-        code += "  add rsp, 8\n"
+        code += f"  add rsp, {node.lhs.ty.size}\n"
         return code
     elif node.kind == parse.NodeKind.ND_VAR \
             or node.kind == parse.NodeKind.ND_MEMBER:

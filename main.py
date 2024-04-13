@@ -36,10 +36,21 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
+typedef struct {
+    int x;
+    int y;
+} Point;
+
+Point random_point() {
+    Point p;
+    p.x = 4;
+    p.y = 5;
+    return p;
+}
+
 int main() {
-    int x=3;
-    read(&x);
-    return x;
+    Point p = random_point();
+    return p.y;
 }
 """
 
@@ -93,9 +104,15 @@ if __name__ == '__main__':
             print("=====函数名:", fn.name, "=====", sep="")
             print("===函数参数===")
             params = fn.params
+            while params is not None:
+                print("变量名:", params.var.name, "大小:", params.var.ty.size, "offset:", params.var.offset)
+                params = params.next
 
             print("===局部变量===")
             locals = fn.locals
+            while locals is not None:
+                print("变量名:", locals.var.name, "大小:", locals.var.ty.size, "offset:", locals.var.offset)
+                locals = locals.next
 
             print("===函数语句===")
             node = fn.node

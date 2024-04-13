@@ -317,9 +317,9 @@ def tokenize(raw):
             continue
 
         # 变量标识符
-        if raw[p].isalpha() or raw[p] == '_':
+        if raw[p].isalpha():
             q = p
-            while q < len(raw) and raw[q].isalnum():
+            while q < len(raw) and (raw[q].isalnum() or raw[q] == '_'):
                 q += 1
             cur.next = Token(TokenKind.TK_IDENT, raw[p:q], None)
             cur = cur.next

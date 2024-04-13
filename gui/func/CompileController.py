@@ -1,3 +1,5 @@
+from qfluentwidgets import MessageBox
+
 from compiler import interpreter, tokenize, codegen, parse, utils
 
 
@@ -35,7 +37,36 @@ class CompileController:
         return interpreter.output
 
     def request_input(self):
-        return self.parent.showInputMessageBox()
+        userInput = self.parent.showInputMessageBox()
+        try:
+            if userInput.isdigit():
+                returnValue = int(userInput)
+            elif userInput[0:2] == '0x':
+                returnValue = int(userInput, 16)
+            elif '.' in userInput:
+                returnValue = float(userInput)
+            elif 'e' in userInput or 'E' in userInput:
+                returnValue = float(userInput)
+            elif 'f' in userInput:
+                returnValue = float(userInput)
+            elif 'd' in userInput:
+                returnValue = float(userInput)
+            elif userInput[0] == '0':
+                returnValue = int(userInput, 8)
+            elif userInput[0] == 'b':
+                returnValue = int(userInput, 2)
+            else:
+                returnValue = int(userInput)
+        except Exception as e:
+            w = MessageBox(
+                '输入错误！❌',
+                f'输入错误：{str(e)}',
+                self.parent
+            )
+            w.cancelButton.setText('关闭')
+            if w.exec():
+                pass
+        return returnValue
 
 
 if __name__ == '__main__':

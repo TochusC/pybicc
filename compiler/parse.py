@@ -389,6 +389,7 @@ def push_tag_scope(tok, ty):
 def struct_decl():
     tag = tokenize.consume_ident()
 
+
     if tag is not None and not tokenize.peek("{"):
         sc = find_tag(tag)
         if sc is None:
@@ -403,7 +404,7 @@ def struct_decl():
     if not tokenize.consume("{"):
         return type.struct_type()
 
-    sc = TagScope()
+    sc = None
 
     if tag is not None:
         sc = find_tag(tag)
