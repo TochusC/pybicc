@@ -8,7 +8,7 @@ token = None
 
 
 def ispunct(c):
-    return c in ['+', '-', '*', '/', '(', ')', '<', '>', '=',
+    return c in ['+', '-', '*', '/', '%', '(', ')', '<', '>', '=',
                  '!', '[', ']', '{', '}', '&', '|', '~', '^',
                  ',', '.', ':', ';', ]
 
@@ -17,7 +17,7 @@ keywords = ["return", "if", "else", "while", "for",
             "int", "short", "long", "void", "char", "bool",
             "enum", "sizeof", "struct", "typedef", "static",
             "break", "continue", "switch", "case", "default",
-            "goto", "union", "float", "double",
+            "goto", "union", "float", "double", "true", "false",
             ]
 
 funs = ["read", "print"]
@@ -240,7 +240,7 @@ def read_char_literal(raw, start):
         c = get_escape_char(raw[q])
     else:
         c = raw[q]
-
+    q += 1
     if raw[q] != "'":
         raise RuntimeError("char literal too long")
 

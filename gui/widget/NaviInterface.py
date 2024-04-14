@@ -12,7 +12,7 @@ from qfluentwidgets import FluentIcon as FIF
 
 from qframelesswindow import FramelessWindow, TitleBar
 
-from gui.func.CodeHighlighter import CHighlighter, AssemblyHighlighter
+from gui.func.CodeHighlighter import CHighlighter, AssemblyHighlighter, TokenHighlighter, ParseHighlighter
 
 
 class Widget(QFrame):
@@ -96,6 +96,13 @@ class CodeEditor(QFrame):
         self.comm.afterChangeActiveFile.connect(self.changeTabToActiveFile)
 
         self.comm.afterOpenFile.connect(self.addNewFile)
+
+        self.comm.afterRemoveFile.connect(self.removeFile)
+
+
+    def removeFile(self, filename):
+        filename = filename[:-2] + '.c'
+        self.tabBar.removeTabByKey(filename)
 
     def addNewFile(self, file_dict):
         filename = file_dict['filename']
@@ -248,6 +255,7 @@ class TokenizeResult(QFrame):
         self.tabBar.addTab('Tokenize', 'Tokenize', FluentIcon.DOCUMENT)
 
         self.text_edit = TextEdit(self)
+        self.highlighter = TokenHighlighter(self.text_edit.document())
         self.text_edit.setReadOnly(True)
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.addWidget(self.tabBar)
@@ -266,10 +274,12 @@ class ParseResult(QFrame):
         self.tabBar.addTab('Parse', 'Parse', FluentIcon.DOCUMENT)
 
         self.text_edit = TextEdit(self)
+        self.highlighter = ParseHighlighter(self.text_edit.document())
         self.text_edit.setReadOnly(True)
         self.vBoxLayout = QVBoxLayout(self)
         self.vBoxLayout.addWidget(self.tabBar)
         self.vBoxLayout.addWidget(self.text_edit)
+
         self.comm.changeParseResult[str].connect(self.text_edit.setText)
 
 

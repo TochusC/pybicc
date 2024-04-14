@@ -21,8 +21,10 @@ def save_parse_result(prog):
     glbs = prog.globals
     parse_result += "===全局变量===" + "\n"
     while glbs is not None:
-        parse_result += "变量名:" + glbs.var.name + "大小:" + str(glbs.var.ty.size) + "offset:" + str(
-            glbs.var.offset) + "\n"
+        parse_result += ("变量名: " + glbs.var.name +
+                         " 大小: " + str(glbs.var.ty.size)
+                         + " offset: " + str(
+            glbs.var.offset) + "\n")
         glbs = glbs.next
     parse_result += "===变量结束===" + "\n"
 
@@ -31,9 +33,22 @@ def save_parse_result(prog):
         parse_result += "=====函数名:" + fn.name + "=====" + "\n"
         parse_result += "===函数参数===" + "\n"
         params = fn.params
+        while params is not None:
+            parse_result += ("变量名: " + params.var.name
+                             + " 大小:" + str(params.var.ty.size)
+                             + " offset: " + str(
+                params.var.offset) + "\n")
+            params = params.next
 
         parse_result += "===局部变量===" + "\n"
         locals = fn.locals
+        while locals is not None:
+            parse_result += ("变量名: "
+                             + locals.var.name
+                             + " 大小: " + str(locals.var.ty.size)
+                             + " offset: " + str(
+                locals.var.offset) + "\n")
+            locals = locals.next
 
         parse_result += "===函数语句===" + "\n"
         node = fn.node
@@ -46,6 +61,9 @@ def save_parse_result(prog):
 
 def save_node_result(node):
     global parse_result
+
+    parse_result += str(node.kind) + " "
+
     if node.kind == parse.NodeKind.ND_NUM:
         parse_result += str(node.val) + " "
     elif node.kind == parse.NodeKind.ND_VAR:
@@ -68,6 +86,26 @@ def save_node_result(node):
             parse_result += "==else开始==" + "\n"
             save_node_result(node.els)
             parse_result += "==结束==" + " "
+    elif node.kind == parse.NodeKind.ND_SWITCH:
+        parse_result += "==SWITCH开始==" + "\n"
+        parse_result += "==条件==" + "\n"
+        print_node(node.cond)
+        parse_result += "==CASE开始==" + "\n"
+        print_node(node.case_next)
+        parse_result += "==DEFAULT开始==" + "\n"
+        print_node(node.default_case)
+        parse_result += "==结束SWITCH==" + " "
+    elif node.kind == parse.NodeKind.ND_CASE:
+        parse_result += node.kind + " "
+        parse_result += "==条件==" + " "
+        parse_result += str(node.val) + " "
+        parse_result += "==NextCase=="
+        if node.case_next is not None:
+            print_node(node.case_next)
+        parse_result += "==结束=="
+    elif node.kind == parse.NodeKind.ND_DEFAULT:
+        parse_result += node.kind + " "
+        parse_result += "==结束=="
     elif node.kind == parse.NodeKind.ND_WHILE:
         parse_result += "==循环开始==" + "\n"
         parse_result += "\n==条件==" + "\n"
@@ -87,14 +125,12 @@ def save_node_result(node):
         save_node_result(node.then)
         parse_result += "==for循环结束=="
     elif node.kind == parse.NodeKind.ND_BLOCK:
-        parse_result += "==代码块开始==" + "\n"
+        parse_result += "\n==代码块开始==" + "\n"
         body = node.body
         while body is not None:
             save_node_result(body)
             body = body.next
         parse_result += "==代码块结束=="
-    else:
-        parse_result += str(node.kind) + " "
 
     parse_result += "\n"
 
@@ -102,6 +138,9 @@ def save_node_result(node):
         save_node_result(node.lhs)
     if node.rhs is not None:
         save_node_result(node.rhs)
+
+
+
 
 
 tokenize_result = ""
@@ -117,6 +156,9 @@ def save_tokenize_result(token):
 
 # 前序遍历输出node，用于调试
 def print_node(node):
+    if node is None:
+        return
+
     if node.kind == parse.NodeKind.ND_NUM:
         print(node.kind, node.val, end=' ')
     elif node.kind == parse.NodeKind.ND_VAR:
@@ -140,6 +182,26 @@ def print_node(node):
             print("==else==")
             print_node(node.els)
         print("==结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_SWITCH:
+        print(node.kind, end=" ")
+        print("\n==条件==")
+        print_node(node.cond)
+        print("==CASE开始==")
+        print_node(node.case_next)
+        print("==DEFAULT开始==")
+        print_node(node.default_case)
+        print("==结束SWITCH==", end=" ")
+    elif node.kind == parse.NodeKind.ND_CASE:
+        print(node.kind, end=" ")
+        print("\n==条件==")
+        print(node.val)
+        print("==NextCase==")
+        if node.case_next is not None:
+            print_node(node.case_next)
+        print("==结束==", end=" ")
+    elif node.kind == parse.NodeKind.ND_DEFAULT:
+        print(node.kind, end=" ")
+        print("\n==结束==", end=" ")
     elif node.kind == parse.NodeKind.ND_WHILE:
         print(node.kind, end=" ")
         print("\n==条件==")

@@ -36,21 +36,15 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-typedef struct {
-    int x;
-    int y;
-} Point;
+enum Color{
+    A = 1,
+    B = 2,
+    C = 3,
+};
 
-Point random_point() {
-    Point p;
-    p.x = 4;
-    p.y = 5;
-    return p;
-}
-
-int main() {
-    Point p = random_point();
-    return p.y;
+int main(){
+    Color c = Color.A;
+    return 1;
 }
 """
 

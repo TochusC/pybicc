@@ -105,7 +105,6 @@ class DataTraveler:
                 self.parent.comm.afterActiveCompileFileChange.emit(self.getAssembly())
                 self.parent.comm.afterActiveResultFileChange.emit(self.resultFileList.getActiveFile()['data'])
 
-
         except Exception as e:
             print(e)
 

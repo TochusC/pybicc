@@ -7,11 +7,6 @@ from enum import Enum
 
 MEMORY_SIZE = 8196
 CompileController = None
-# 系统内存被分为栈和堆两部分，栈存放程序数据，堆存放操作系统。
-# memory = [heap + stack]
-# 堆位于内存底部，存储地址递增；栈位于内存顶部.存储地址递减
-
-memory = [0 for t in range(MEMORY_SIZE)]  # 模拟内存
 
 
 # 寻址模式
@@ -23,142 +18,125 @@ class AddressingMode(Enum):
 
 MAX_64BIT_INT = 0x7FFFFFFFFFFFFFFF
 
-register = [0 for t in range(20)]
 
-# 寄存器索引表
-register_index_table = {
+class Register:
+    shared_storage = [0 for t in range(256)]
+
+    def __init__(self, name, pos, size):
+        self.name = name
+        self.pos = pos
+        self.size = size
+
+    def insert(self, value):
+        for i in range(self.size):
+            self.shared_storage[self.pos + i] = (value >> (i * 8)) & 0xFF
+
+    def get(self):
+        value = 0
+        for i in range(self.size):
+            value += self.shared_storage[self.pos + i] << (i * 8)
+        return value
+
+
+Register_Table = {
     # 64bit寄存器
-    "rax": 0,  # 通常用于存放函数返回值
-    "rsp": 1,  # 栈指针，指向栈顶，
-    "rbp": 2,  # 栈基指针，指向栈底
-
-    "rdi": 3,  # 函数参数1
-    "rsi": 4,  # 函数参数2
-    "rdx": 5,  # 函数参数3
-    "rcx": 6,  # 函数参数4
-    "r8": 7,  # 函数参数5
-    "r9": 8,  # 函数参数6
-    "rbx": 9,  # 好像是用于存储数据
-    "r10": 10,  # r10~r15通常用于存放临时变量
-    "r11": 11,
-    "r12": 12,
-    "r13": 13,
-    "r14": 14,
-    "r15": 15,
+    "rax": Register("rax", 0, 8),
+    "rsp": Register("rsp", 8, 8),
+    "rbp": Register("rbp", 16, 8),
+    "rdi": Register("rdi", 24, 8),
+    "rsi": Register("rsi", 32, 8),
+    "rdx": Register("rdx", 40, 8),
+    "rcx": Register("rcx", 48, 8),
+    "r8": Register("r8", 56, 8),
+    "r9": Register("r9", 64, 8),
+    "rbx": Register("rbx", 72, 8),
+    "r10": Register("r10", 80, 8),
+    "r11": Register("r11", 88, 8),
+    "r12": Register("r12", 96, 8),
+    "r13": Register("r13", 104, 8),
+    "r14": Register("r14", 112, 8),
+    "r15": Register("r15", 120, 8),
 
     # 32bit寄存器
-    "eax": 0,
-    "ebx": 9,
-    "ecx": 6,
-    "edx": 5,
-    "esi": 4,
-    "edi": 3,
-    "esp": 1,
-    "ebp": 2,
-    "r8d": 7,
-    "r9d": 8,
-    "r10d": 10,
-    "r11d": 11,
-    "r12d": 12,
-    "r13d": 13,
-    "r14d": 14,
-    "r15d": 15,
+    "eax": Register("eax", 0, 4),
+    "esp": Register("esp", 8, 4),
+    "ebp": Register("ebp", 16, 4),
+    "edi": Register("edi", 24, 4),
+    "esi": Register("esi", 32, 4),
+    "edx": Register("edx", 40, 4),
+    "ecx": Register("ecx", 48, 4),
+    "r8d": Register("r8d", 56, 4),
+    "r9d": Register("r9d", 64, 4),
+    "ebx": Register("ebx", 72, 4),
+    "r10d": Register("r10d", 80, 4),
+    "r11d": Register("r11d", 88, 4),
+    "r12d": Register("r12d", 96, 4),
+    "r13d": Register("r13d", 104, 4),
+    "r14d": Register("r14d", 112, 4),
+    "r15d": Register("r15d", 120, 4),
 
     # 16bit寄存器
-    "ax": 0,
-    "bx": 9,
-    "cx": 6,
-    "dx": 5,
-    "si": 4,
-    "di": 3,
-    "sp": 1,
-    "bp": 2,
-    "r8w": 7,
-    "r9w": 8,
-    "r10w": 10,
-    "r11w": 11,
-    "r12w": 12,
-    "r13w": 13,
-    "r14w": 14,
-    "r15w": 15,
+    "ax": Register("ax", 0, 2),
+    "sp": Register("sp", 8, 2),
+    "bp": Register("bp", 16, 2),
+    "di": Register("di", 24, 2),
+    "si": Register("si", 32, 2),
+    "dx": Register("dx", 40, 2),
+    "cx": Register("cx", 48, 2),
+    "r8w": Register("r8w", 56, 2),
+    "r9w": Register("r9w", 64, 2),
+    "bx": Register("bx", 72, 2),
+    "r10w": Register("r10w", 80, 2),
+    "r11w": Register("r11w", 88, 2),
+    "r12w": Register("r12w", 96, 2),
+    "r13w": Register("r13w", 104, 2),
+    "r14w": Register("r14w", 112, 2),
+    "r15w": Register("r15w", 120, 2),
 
     # 8bit寄存器
-    "al": 0,
-    "bl": 9,
-    "cl": 6,
-    "dl": 5,
-    "sil": 4,
-    "dil": 3,
-    "spl": 1,
-    "bpl": 2,
-    "r8b": 7,
-    "r9b": 8,
-    "r10b": 10,
-    "r11b": 11,
-    "r12b": 12,
-    "r13b": 13,
-    "r14b": 14,
-    "r15b": 15,
+    "al": Register("al", 0, 1),
+    "spl": Register("spl", 8, 1),
+    "bpl": Register("bpl", 16, 1),
+    "dil": Register("dil", 24, 1),
+    "sil": Register("sil", 32, 1),
+    "dl": Register("dl", 40, 1),
+    "cl": Register("cl", 48, 1),
+    "r8b": Register("r8b", 56, 1),
+    "r9b": Register("r9b", 64, 1),
+    "bl": Register("bl", 72, 1),
+    "r10b": Register("r10b", 80, 1),
+    "r11b": Register("r11b", 88, 1),
+    "r12b": Register("r12b", 96, 1),
+    "r13b": Register("r13b", 104, 1),
+    "r14b": Register("r14b", 112, 1),
+    "r15b": Register("r15b", 120, 1),
 
     # 标志寄存器
-    "CF": 16,  # 进位标志
-    "ZF": 17,  # 零标志
-    "SF": 18,  # 符号标志
-    "OF": 19,  # 溢出标志
-
-    # 浮点寄存器
-    "xmm0": 20,
+    "CF": Register("CF", 128, 1),
+    "OF": Register("OF", 129, 1),
+    "SF": Register("SF", 130, 1),
+    "ZF": Register("ZF", 131, 1),
 }
 
 
-def insertIntoMemory(address, value, size):
-    """
-    将数据插入到内存中
-    :param address: 插入的地址
-    :param value: 插入的值
-    :param size: 插入的大小
-    :return: None
-    """
-    if size == 1:
-        memory[address] = value
-    elif size == 2:
-        memory[address] = value & 0xFF
-        memory[address + 1] = (value >> 8) & 0xFF
-    elif size == 4:
-        for i in range(4):
-            memory[address + i] = (value >> (i * 8)) & 0xFF
-    elif size == 8:
-        for i in range(8):
-            memory[address + i] = (value >> (i * 8)) & 0xFF
+class MemoryClass:
+    storage = [0 for t in range(MEMORY_SIZE)]
+
+    def insert(self, pos, value, size):
+        if type(value) == int:
+            for i in range(size):
+                self.storage[pos + i] = (value >> (i * 8)) & 0xFF
+        else:
+            print("value:", value)
+
+    def get(self, pos, size):
+        value = 0
+        for i in range(size):
+            value += self.storage[pos + i] << (i * 8)
+        return value
 
 
-def getRegisterValue(register_name):
-    """
-    获取寄存器的值
-    :param register_name: 寄存器名
-    :return: 寄存器的值
-    """
-    return register[register_index_table[register_name]]
-
-
-def getMemoryValue(address, size):
-    """
-    获取内存中的值
-    :param address: 内存地址
-    :param size: 获取的大小
-    :return: 内存中的值
-    """
-    if size == 1:
-        return memory[address]
-    elif size == 2:
-        return memory[address] + (memory[address + 1] << 8)
-    elif size == 4:
-        return memory[address] + (memory[address + 1] << 8) + (memory[address + 2] << 16) + (memory[address + 3] << 24)
-    elif size == 8:
-        return memory[address] + (memory[address + 1] << 8) + (memory[address + 2] << 16) + (memory[address + 3] << 24) + (
-                memory[address + 4] << 32) + (memory[address + 5] << 40) + (memory[address + 6] << 48) + (
-                       memory[address + 7] << 56)
-
+Memory = MemoryClass()
 
 output = ''
 
@@ -173,7 +151,7 @@ def addressing(source):
     :return AddressingMode:  枚举类型的寻址模式
     """
     # 寄存器寻址模式
-    if source in register_index_table:
+    if source in Register_Table:
         return AddressingMode.REGISTER
 
     # 内存寻址模式
@@ -220,7 +198,7 @@ def getMemoryAddress(src):
         if root.kind == NodeKind.ND_NUM:
             return root.val
         elif root.kind == NodeKind.ND_REGISTER:
-            return register[register_index_table[root.val]]
+            return Register_Table[root.val].get()
         elif root.kind == NodeKind.ND_ADD:
             return eval(root.lhs) + eval(root.rhs)
         elif root.kind == NodeKind.ND_SUB:
@@ -316,6 +294,21 @@ def getMemoryAddress(src):
     result = eval(root)
     return result
 
+
+def float_to_ieee754(value):
+    # 将浮点数解析为字节序列
+    packed = struct.pack('>f', value)
+    # 将字节序列转换为十六进制字符串
+    return ''.join(['%02x' % b for b in packed])
+
+
+def double_to_ieee754(value):
+    # 将浮点数解析为字节序列
+    packed = struct.pack('>d', value)
+    # 将字节序列转换为十六进制字符串
+    return ''.join(['%02x' % b for b in packed])
+
+
 def ieee754_to_float(hex_str):
     # 将十六进制字符串转换为字节序列
     packed = bytes.fromhex(hex_str)
@@ -330,6 +323,7 @@ def ieee754_to_double(ieee754_hex):
     value = struct.unpack('>d', ieee754_bytes)[0]
     return value
 
+
 # 根据寻址模式获取操作数的值
 def getValueByAddressing(AddressingMode, source):
     """
@@ -342,19 +336,13 @@ def getValueByAddressing(AddressingMode, source):
         try:
             return int(source)
         except ValueError:
-            try:
-                return ieee754_to_float(source)
-            except Exception:
-                try:
-                    return ieee754_to_double(source)
-                except Exception:
-                    raise RuntimeError("无法识别的立即数: %s" % source)
+           return source
 
     elif AddressingMode == AddressingMode.REGISTER:
-        return register[register_index_table[source]]
+        return Register_Table[source].get()
 
     elif AddressingMode == AddressingMode.MEMORY:
-        return memory[getMemoryAddress(source)]
+        raise RuntimeError("在不确定大小的情况下无法获取内存值")
     else:
         raise RuntimeError("无法识别的源操作数: %s" % source)
 
@@ -372,9 +360,10 @@ class Func:
 
 
 class Vars:
-    def __init__(self, name):
+    def __init__(self, name, size):
         self.pos = 0
         self.name = name
+        self.size = size
 
 
 glb_vars = {}
@@ -384,7 +373,7 @@ inset_func = {'read', 'write'}
 
 glb_vars_size = 0
 
-current_var = Vars('')
+current_var = Vars('', 0)
 
 
 def enterDataSegment(command_line_index, assembly_commands):
@@ -400,18 +389,25 @@ def enterDataSegment(command_line_index, assembly_commands):
             return command_line_index
 
         elif command_line[-1] == ':':
-            current_var = Vars(command_line[:-1])
+            current_var = Vars(command_line[:-1], 0)
             current_var.pos = glb_vars_size
             glb_vars[command_line[:-1]] = current_var
 
         elif command_line[0:5] == '.zero':
             command_segment = command_line.split(" ")
             glb_vars_size += int(command_segment[1])
+            current_var.size += int(command_segment[1])
 
         elif command_line[0:5] == '.byte':
             command_segment = command_line.split(" ")
-            memory[glb_vars_size] = int(command_segment[1])
+            Memory.insert(glb_vars_size, int(command_segment[1]), 1)
+            current_var.size += 1
             glb_vars_size += 1
+
+
+def init():
+    Register_Table['rsp'].insert(MEMORY_SIZE)
+    Register_Table['rbp'].insert(MEMORY_SIZE)
 
 
 def run(code):
@@ -424,6 +420,8 @@ def run(code):
     global glb_vars, glb_func
     global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX
     global register
+
+    init()
 
     output = ''
 
@@ -490,20 +488,30 @@ def run_command(command):
 
             addressing_mode = addressing(source)
 
-            source_value = getValueByAddressing(addressing_mode, source)
+            if addressing_mode == AddressingMode.MEMORY:
+                source_value = Memory.get(getMemoryAddress(source), 8)
+            else:
+                source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table['rsp']] -= 8
-            stack_top = register[register_index_table['rsp']]
+            rsp = Register_Table['rsp']
+            value = rsp.get()
+            value -= 8
+            rsp.insert(value)
 
-            memory[stack_top] = source_value
+            stack_top = Register_Table['rsp'].get()
+            Memory.insert(stack_top, source_value, 8)
+
         elif len(segment) == 3:
             if segment[1] == 'offset':
                 var_name = segment[2]
 
-                register[register_index_table['rsp']] -= 8
-                stack_top = register[register_index_table['rsp']]
-                memory[stack_top] = glb_vars[var_name].pos
+                rsp = Register_Table['rsp']
+                value = rsp.get()
+                value -= 8
+                rsp.insert(value)
 
+                stack_top = Register_Table['rsp'].get()
+                Memory.insert(stack_top, glb_vars[var_name].pos, 8)
         else:
             raise RuntimeError("push的参数量错误，共有%d个参数" % len(segment))
 
@@ -514,14 +522,13 @@ def run_command(command):
             addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
-                register_index = register[register_index_table[destination]]
+                register = Register_Table[destination]
 
-                stack_top = register[register_index_table['rsp']]
+                stack_top = Register_Table['rsp'].get()
                 # print("top index:", stack_top)
-                register[register_index_table[destination]] = memory[stack_top]
-                register[register_index_table['rsp']] += 8
+                register.insert(Memory.get(stack_top, register.size))
 
-
+                Register_Table['rsp'].insert(stack_top + 8)
             elif addressing_mode == AddressingMode.MEMORY:
                 raise RuntimeError("pop指令的目的操作数错误, %s" % destination)
 
@@ -543,7 +550,8 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table[destination]] += source_value
+            register = Register_Table[destination]
+            register.insert(register.get() + source_value)
 
         else:
             raise RuntimeError("add指令的参数量错误，共有%d个参数" % len(segment))
@@ -563,7 +571,8 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table[destination]] -= source_value
+            register = Register_Table[destination]
+            register.insert(register.get() - source_value)
 
         else:
             raise RuntimeError("sub指令的参数量错误，共有%d个参数" % len(segment))
@@ -583,7 +592,8 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table[destination]] *= source_value
+            register = Register_Table[destination]
+            register.insert(register.get() * source_value)
 
         else:
             raise RuntimeError("imul指令的参数量错误，共有%d个参数" % len(segment))
@@ -596,9 +606,13 @@ def run_command(command):
             addressing_mode = addressing(operand)
 
             if addressing_mode == AddressingMode.REGISTER:
-                register[register_index_table['rax']]= register[register_index_table['rax']] // register[register_index_table[operand]]
-                register[register_index_table['rdx']]= register[register_index_table['rax']] % register[register_index_table[operand]]
+                rax = Register_Table['rax']
+                rdx = Register_Table['rdx']
 
+                src = rax.get()
+
+                rax.insert(src // getValueByAddressing(addressing_mode, operand))
+                rdx.insert(src % getValueByAddressing(addressing_mode, operand))
             else:
                 raise RuntimeError("idiv指令的源操作数错误, %s" % operand)
 
@@ -630,25 +644,25 @@ def run_command(command):
             cmp_result = operand1_value - operand2_value
 
             if cmp_result == 0:
-                register[register_index_table['ZF']] = 1
+                Register_Table['ZF'].insert(1)
             else:
-                register[register_index_table['ZF']] = 0
+                Register_Table['ZF'].insert(0)
 
             if cmp_result < 0:
-                register[register_index_table['SF']] = 1
+                Register_Table['SF'].insert(1)
             else:
-                register[register_index_table['SF']] = 0
+                Register_Table['SF'].insert(0)
 
             # TODO 溢出标志位实现不够完善
             if cmp_result > MAX_64BIT_INT or cmp_result < -MAX_64BIT_INT:
-                register[register_index_table['OF']] = 1
+                Register_Table['OF'].insert(1)
             else:
-                register[register_index_table['OF']] = 0
+                Register_Table['OF'].insert(0)
 
             if cmp_result > 0:
-                register[register_index_table['CF']] = 1
+                Register_Table['CF'].insert(1)
             else:
-                register[register_index_table['CF']] = 0
+                Register_Table['CF'].insert(0)
 
         else:
             raise RuntimeError("cmp指令的参数量错误，共有%d个参数" % len(segment))
@@ -660,10 +674,10 @@ def run_command(command):
             addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
-                if register[register_index_table['ZF']] == 1:
-                    register[register_index_table[destination]] = 1
+                if Register_Table['ZF'].get() == 1:
+                    Register_Table[destination].insert(1)
                 else:
-                    register[register_index_table[destination]] = 0
+                    Register_Table[destination].insert(0)
 
             else:
                 raise RuntimeError("sete指令的目的操作数错误, %s" % destination)
@@ -678,10 +692,10 @@ def run_command(command):
             addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
-                if register[register_index_table['ZF']] == 0:
-                    register[register_index_table[destination]] = 1
+                if Register_Table['ZF'].get() == 0:
+                    Register_Table[destination].insert(1)
                 else:
-                    register[register_index_table[destination]] = 0
+                    Register_Table[destination].insert(0)
 
             else:
                 raise RuntimeError("setne指令的目的操作数错误, %s" % destination)
@@ -696,10 +710,10 @@ def run_command(command):
             addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
-                if register[register_index_table['SF']] != register[register_index_table['OF']]:
-                    register[register_index_table[destination]] = 1
+                if Register_Table['SF'].get() != Register_Table['OF'].get():
+                    Register_Table[destination].insert(1)
                 else:
-                    register[register_index_table[destination]] = 0
+                    Register_Table[destination].insert(0)
 
             else:
                 raise RuntimeError("setl指令的目的操作数错误, %s" % destination)
@@ -714,11 +728,10 @@ def run_command(command):
             addressing_mode = addressing(destination)
 
             if addressing_mode == AddressingMode.REGISTER:
-                if (register[register_index_table['ZF']] == 1
-                        or register[register_index_table['SF']] != register[register_index_table['OF']]):
-                    register[register_index_table[destination]] = 1
+                if Register_Table['ZF'].get() == 1 or Register_Table['SF'].get() != Register_Table['OF'].get():
+                    Register_Table[destination].insert(1)
                 else:
-                    register[register_index_table[destination]] = 0
+                    Register_Table[destination].insert(0)
 
             else:
                 raise RuntimeError("setle指令的目的操作数错误, %s" % destination)
@@ -741,7 +754,7 @@ def run_command(command):
                 source_value = getValueByAddressing(addressing_mode, source)
                 # TODO 0扩展 依照现在版本的模拟程度， 0扩展不需要实现
 
-                register[register_index_table[destination]] = source_value
+                Register_Table[destination].insert(source_value)
 
             else:
                 raise RuntimeError("movzb指令的目的操作数错误, %s" % destination)
@@ -760,10 +773,12 @@ def run_command(command):
             if addressing_mode == AddressingMode.REGISTER:
                 source = segment[4]
                 addressing_mode = addressing(source)
-                source_value = getValueByAddressing(addressing_mode, source)
-                # TODO 符号扩展 依照现在版本的模拟程度， 符号扩展不需要实现
+                if addressing_mode == AddressingMode.MEMORY:
+                    source_value = Memory.get(getMemoryAddress(source), 1)
+                else:
+                    source_value = getValueByAddressing(addressing_mode, source)
+                Register_Table[destination].insert(source_value)
 
-                register[register_index_table[destination]] = source_value
 
             else:
                 raise RuntimeError("movsb指令的目的操作数错误, %s" % destination)
@@ -782,8 +797,7 @@ def run_command(command):
                 addressing_mode = addressing(source)
                 source_value = getValueByAddressing(addressing_mode, source)
 
-                register[register_index_table[destination]] = source_value
-
+                Register_Table[destination].insert(source_value)
             else:
                 raise RuntimeError("movss指令的目的操作数错误, %s" % destination)
 
@@ -801,8 +815,7 @@ def run_command(command):
                 addressing_mode = addressing(source)
                 source_value = getValueByAddressing(addressing_mode, source)
 
-                register[register_index_table[destination]] = source_value
-
+                Register_Table[destination].insert(source_value)
             else:
                 raise RuntimeError("movsd指令的目的操作数错误, %s" % destination)
 
@@ -819,9 +832,12 @@ def run_command(command):
             if addressing_mode == AddressingMode.REGISTER:
                 source = segment[4]
                 addressing_mode = addressing(source)
-                source_value = getValueByAddressing(addressing_mode, source)
+                if addressing_mode == AddressingMode.MEMORY:
+                    source_value = Memory.get(getMemoryAddress(source), 4)
+                else:
+                    source_value = getValueByAddressing(addressing_mode, source)
                 # TODO 符号扩展 依照现在版本的模拟程度， 符号扩展不需要实现
-                register[register_index_table[destination]] = source_value
+                Register_Table[destination].insert(source_value)
 
             else:
                 raise RuntimeError("movsxd指令的目的操作数错误, %s" % destination)
@@ -841,9 +857,18 @@ def run_command(command):
             src_addr_mode = addressing(source)
 
             if dest_addr_mode == AddressingMode.REGISTER:
-                register[register_index_table[destination]] = getValueByAddressing(src_addr_mode, source)
+                if src_addr_mode == AddressingMode.MEMORY:
+                    register = Register_Table[destination]
+                    Memory.get(getMemoryAddress(source), register.size)
+                    register.insert(Memory.get(getMemoryAddress(source), register.size))
+                else:
+                    Register_Table[destination].insert(getValueByAddressing(src_addr_mode, source))
             elif dest_addr_mode == AddressingMode.MEMORY:
-                memory[getMemoryAddress(destination)] = getValueByAddressing(src_addr_mode, source)
+                if src_addr_mode == AddressingMode.REGISTER:
+                    register = Register_Table[source]
+                    Memory.insert(getMemoryAddress(destination), register.get(), register.size)
+                else:
+                    raise RuntimeError("mov指令的源操作数错误, %s" % source)
             else:
                 raise RuntimeError("mov指令的目的操作数错误, %s" % destination)
 
@@ -863,7 +888,7 @@ def run_command(command):
                 raise RuntimeError("lea指令的目的操作数错误, %s" % op_destination)
 
             if src_addr_mode == AddressingMode.MEMORY:
-                register[register_index_table[op_destination]] = getMemoryAddress(op_source)
+                Register_Table[op_destination].insert(getMemoryAddress(op_source))
             else:
                 raise RuntimeError("lea指令的源操作数错误, %s" % op_source)
 
@@ -886,10 +911,48 @@ def run_command(command):
                 ret = destination_value | source_value
 
             if addressing_mode1 == AddressingMode.REGISTER:
-                register[register_index_table[op_destination]] = ret
+                Register_Table[op_destination].insert(ret)
 
             elif addressing_mode1 == AddressingMode.MEMORY:
-                memory[getMemoryAddress(op_destination)] = ret
+                if addressing_mode2 == AddressingMode.REGISTER:
+                    register = Register_Table[op_source]
+                    Memory.insert(getMemoryAddress(op_destination), ret, register.size)
+                else:
+                    raise RuntimeError("and指令的源操作数错误, %s" % op_source)
+    elif segment[0] == 'xor':
+        if len(segment) == 3:
+            op_destination = segment[1][:-1]
+            addressing_mode1 = addressing(op_destination)
+            destination_value = getValueByAddressing(addressing_mode1, op_destination)
+
+            op_source = segment[2]
+            addressing_mode2 = addressing(op_source)
+            source_value = getValueByAddressing(addressing_mode2, op_source)
+
+            ret = destination_value ^ source_value
+
+            if addressing_mode1 == AddressingMode.REGISTER:
+                Register_Table[op_destination].insert(ret)
+
+            elif addressing_mode1 == AddressingMode.MEMORY:
+                if addressing_mode2 == AddressingMode.REGISTER:
+                    register = Register_Table[op_source]
+                    Memory.insert(getMemoryAddress(op_destination), ret, register.size)
+                else:
+                    raise RuntimeError("xor指令的源操作数错误, %s" % op_source)
+    elif segment[0] == 'not':
+        if len(segment) == 2:
+            op_destination = segment[1][:-1]
+            addressing_mode1 = addressing(op_destination)
+            destination_value = getValueByAddressing(addressing_mode1, op_destination)
+
+            ret = ~destination_value
+
+            if addressing_mode1 == AddressingMode.REGISTER:
+                Register_Table[op_destination].insert(ret)
+
+            elif addressing_mode1 == AddressingMode.MEMORY:
+                raise RuntimeError("not指令的目的操作数错误, %s" % op_destination)
     elif segment[0] == "shl":
         if len(segment) == 3:
             destination = segment[1][:-1]
@@ -904,7 +967,7 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table[destination]] = register[register_index_table[destination]] << source_value
+            Register_Table[destination].insert(Register_Table[destination].get() << source_value)
 
         else:
             raise RuntimeError("shl指令的参数量错误，共有%d个参数" % len(segment))
@@ -922,13 +985,46 @@ def run_command(command):
 
             source_value = getValueByAddressing(addressing_mode, source)
 
-            register[register_index_table[destination]] = register[register_index_table[destination]] >> source_value
-
+            Register_Table[destination].insert(Register_Table[destination].get() >> source_value)
         else:
             raise RuntimeError("shr指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "sar":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode != AddressingMode.REGISTER:
+                raise RuntimeError("sar指令的目的操作数错误, %s" % destination)
+
+            source = segment[2]
+            addressing_mode = addressing(source)
+
+            source_value = getValueByAddressing(addressing_mode, source)
+
+            Register_Table[destination].insert(Register_Table[destination].get() >> source_value)
+        else:
+            raise RuntimeError("sar指令的参数量错误，共有%d个参数" % len(segment))
+    elif segment[0] == "sal":
+        if len(segment) == 3:
+            destination = segment[1][:-1]
+
+            addressing_mode = addressing(destination)
+
+            if addressing_mode != AddressingMode.REGISTER:
+                raise RuntimeError("sal指令的目的操作数错误, %s" % destination)
+
+            source = segment[2]
+            addressing_mode = addressing(source)
+
+            source_value = getValueByAddressing(addressing_mode, source)
+
+            Register_Table[destination].insert(Register_Table[destination].get() << source_value)
+        else:
+            raise RuntimeError("sal指令的参数量错误，共有%d个参数" % len(segment))
     # print指令，调试用。
     elif segment[0] == "print":
-        output += "print rax value:" + str(register[register_index_table['rax']]) + "\n"
+        output += "print rax value:" + str(Register_Table['rax'].get()) + "\n"
     elif segment[0] == "jmp":
         if len(segment) == 2:
             label = segment[1]
@@ -941,7 +1037,7 @@ def run_command(command):
     elif segment[0] == "jnz":
         if len(segment) == 2:
             label = segment[1]
-            if register[register_index_table['ZF']] == 0:
+            if Register_Table['ZF'].get() == 0:
                 if label in glb_func[CURRENT_FUNC].labels:
                     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
                 else:
@@ -951,7 +1047,7 @@ def run_command(command):
     elif segment[0] == "je":
         if len(segment) == 2:
             label = segment[1]
-            if register[register_index_table['ZF']] == 1:
+            if Register_Table['ZF'].get() == 1:
                 if label in glb_func[CURRENT_FUNC].labels:
                     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
                 else:
@@ -961,7 +1057,7 @@ def run_command(command):
     elif segment[0] == "jne":
         if len(segment) == 2:
             label = segment[1]
-            if register[register_index_table['ZF']] == 0:
+            if Register_Table['ZF'].get() == 0:
                 if label in glb_func[CURRENT_FUNC].labels:
                     RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].labels[label]
                 else:
@@ -972,41 +1068,41 @@ def run_command(command):
         if len(segment) == 2:
             func_name = segment[1]
             if func_name in glb_func:
-                PREV_FUNC.append({'func': CURRENT_FUNC, 'index': RUNNING_COMMAND_LINE_INDEX, 'regs': register.copy()})
+                PREV_FUNC.append({'func': CURRENT_FUNC, 'index': RUNNING_COMMAND_LINE_INDEX})
                 CURRENT_FUNC = func_name
                 RUNNING_COMMAND_LINE_INDEX = glb_func[CURRENT_FUNC].entry
             elif func_name in inset_func:
                 if func_name == 'read':
                     if CompileController is not None:
                         addr = getMemoryAddress('[rdi]')
-                        memory[addr] = CompileController.request_input()
+                        Memory.insert(addr, CompileController.request_input(), 8)
                     else:
                         addr = getMemoryAddress('[rdi]')
                         print("请求输入：")
                         userInput = input()
                         try:
                             if userInput.isdigit():
-                                memory[addr] = int(userInput)
+                                Memory.insert(addr, int(userInput), 8)
                             elif userInput[0:2] == '0x':
-                                memory[addr] = int(userInput, 16)
+                                Memory.insert(addr, int(userInput, 16), 8)
                             elif '.' in userInput:
-                                memory[addr] = float(userInput)
+                                Memory.insert(addr, float(userInput), 8)
                             elif 'e' in userInput or 'E' in userInput:
-                                memory[addr] = float(userInput)
+                                Memory.insert(addr, float(userInput), 8)
                             elif 'f' in userInput:
-                                memory[addr] = float(userInput)
+                                Memory.insert(addr, float(userInput), 8)
                             elif 'd' in userInput:
-                                memory[addr] = float(userInput)
+                                Memory.insert(addr, float(userInput), 8)
                             elif userInput[0] == '0':
-                                memory[addr] = int(userInput, 8)
+                                Memory.insert(addr, int(userInput, 8), 8)
                             elif userInput[0] == 'b':
-                                memory[addr] = int(userInput, 2)
+                                Memory.insert(addr, int(userInput, 2), 8)
                             else:
-                                memory[addr] = int(userInput)
+                                Memory.insert(addr, int(userInput), 8)
                         except ValueError:
                             raise RuntimeError("无法识别的输入: %s" % userInput)
                 elif func_name == 'write':
-                    output += str(register[register_index_table['rdi']]) + '\n'
+                    output += str(Register_Table['rdi'].get()) + '\n'
             else:
                 raise RuntimeError("未找到函数: %s" % func_name)
         else:
@@ -1014,7 +1110,7 @@ def run_command(command):
     # ret指令，用于从函数中返回 通用形式：ret
     elif segment[0] == "ret":
         if CURRENT_FUNC == 'main':
-            output += "return value:" + str(register[register_index_table['rax']]) + "\n"
+            output += "return value:" + str(Register_Table['rax'].get()) + "\n"
             RUNNING_COMMAND_LINE_INDEX = MAX_64BIT_INT
         else:
             return_info = PREV_FUNC.pop()
@@ -1029,3 +1125,8 @@ def run_command(command):
         if not (segment[0] == "" or segment[0][0] == "."):
             # 空指令或标签跳过
             print("无法识别的指令: ", segment[0])
+
+
+if __name__ == '__main__':
+    Register_Table['rax'].insert(12)
+    print(Register_Table['rax'].get())

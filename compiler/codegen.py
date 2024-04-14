@@ -61,7 +61,7 @@ def double_to_ieee754(num):
     # 将浮点数转换为 64 位 IEEE 754 格式的字节序列
     ieee754_bytes = struct.pack('>d', num)
     # 将字节序列转换为十六进制表示
-    ieee754_hex = ''.join(f'{byte:02X}' for byte in ieee754_bytes)
+    ieee754_hex = ''.join(f'{byte:02x}' for byte in ieee754_bytes)
     return ieee754_hex
 
 
@@ -174,6 +174,10 @@ def gen_binary(node):
     elif node.kind in [parse.NodeKind.ND_DIV, parse.NodeKind.ND_DIV_EQ]:
         code += "  cqo\n"
         code += "  idiv rdi\n"
+    elif node.kind in [parse.NodeKind.ND_MOD, parse.NodeKind.ND_MOD_EQ]:
+        code += "  cqo\n"
+        code += "  idiv rdi\n"
+        code += "  mov rax, rdx\n"
     elif node.kind in [parse.NodeKind.ND_BITAND]:
         code += "  and rax, rdi\n"
     elif node.kind in [parse.NodeKind.ND_BITOR]:
@@ -268,6 +272,7 @@ def gen(node):
     elif node.kind in [parse.NodeKind.ND_ADD_EQ, parse.NodeKind.ND_SUB_EQ,
                        parse.NodeKind.ND_PTR_ADD_EQ, parse.NodeKind.ND_PTR_SUB_EQ,
                        parse.NodeKind.ND_MUL_EQ, parse.NodeKind.ND_DIV_EQ,
+                        parse.NodeKind.ND_MOD_EQ,
                        parse.NodeKind.ND_SHL_EQ, parse.NodeKind.ND_SHR_EQ,]:
         gen_lval(node.lhs)
         code += "  push [rsp]\n"
@@ -440,6 +445,11 @@ def gen(node):
         return code
 
     elif node.kind == parse.NodeKind.ND_CASE:
+        code += f".L.case.{node.case_label}:\n"
+        gen(node.lhs)
+        return code
+
+    elif node.kind == parse.NodeKind.ND_DEFAULT:
         code += f".L.case.{node.case_label}:\n"
         gen(node.lhs)
         return code

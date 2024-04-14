@@ -92,6 +92,9 @@ class NodeKind(Enum):
     ND_SHR_EQ = 54  # >>=
     ND_SHL_EQ = 55  # <<=
 
+    ND_MOD = 56  # %
+    ND_MOD_EQ = 57  # %=
+
 
 class Var:
     name = None  # 变量名
@@ -316,6 +319,15 @@ def new_unary(kind, lhs, tok=tokenize.token):
 
 def new_num():
     if tokenize.token.kind != tokenize.TokenKind.TK_NUM:
+        if tokenize.token.kind == tokenize.TokenKind.TK_RESERVED:
+            if tokenize.token.str == "true":
+                node = Node(NodeKind.ND_NUM, val=1, tok=tokenize.token)
+                tokenize.token = tokenize.token.next
+                return node
+            if tokenize.token.str == "false":
+                node = Node(NodeKind.ND_NUM, val=0, tok=tokenize.token)
+                tokenize.token = tokenize.token.next
+                return node
         raise RuntimeError("Error: expected a number, but got %s" % tokenize.token.str)
     if {'e', 'E', '.', 'f', "F"} & set(str(tokenize.token.str)):
         if 'f' in tokenize.token.str or 'F' in tokenize.token.str:
@@ -850,7 +862,7 @@ def stmt2():
             raise RuntimeError("stray default", tokenize.token)
         tokenize.expect(":")
 
-        node = new_node(NodeKind.ND_DEFAULT, stmt())
+        node = new_unary(NodeKind.ND_DEFAULT, stmt())
         current_switch.default_case = node
         return node
 
@@ -949,7 +961,7 @@ def expr():
 
 
 # assign    = logor (assign-op assign)?
-# assign-op = "=" | "+=" | "-=" | "*=" | "/=" | "<<=" | ">>="
+# assign-op = "=" | "+=" | "-=" | "*=" | %= | "/=" | "<<=" | ">>="
 def assign():
     node = logor()
     if tokenize.consume("="):
@@ -958,6 +970,8 @@ def assign():
         return new_binary(NodeKind.ND_MUL_EQ, node, assign(), tok=tokenize.token)
     if tokenize.consume("/="):
         return new_binary(NodeKind.ND_DIV_EQ, node, assign(), tok=tokenize.token)
+    if tokenize.consume("%="):
+        return new_binary(NodeKind.ND_MOD_EQ, node, assign(), tok=tokenize.token)
     if tokenize.consume("<<="):
         return new_binary(NodeKind.ND_SHL_EQ, node, assign(), tok=tokenize.token)
     if tokenize.consume(">>="):
@@ -1059,7 +1073,7 @@ def add():
             return node
 
 
-# mul = cast ("*" cast | "/" cast)*
+# mul = cast ("*" cast | "/" cast | "%" cast)*
 def mul():
     node = unary()
     while True:
@@ -1067,6 +1081,8 @@ def mul():
             node = new_binary(NodeKind.ND_MUL, node, cast(), tok=tokenize.token)
         elif tokenize.consume("/"):
             node = new_binary(NodeKind.ND_DIV, node, cast(), tok=tokenize.token)
+        elif tokenize.consume("%"):
+            node = new_binary(NodeKind.ND_MOD, node, cast(), tok=tokenize.token)
         else:
             return node
 
