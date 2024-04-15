@@ -36,15 +36,11 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-enum Color{
-    A = 1,
-    B = 2,
-    C = 3,
-};
+
+int a;
 
 int main(){
-    Color c = Color.A;
-    return 1;
+    return a;
 }
 """
 

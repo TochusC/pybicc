@@ -5,7 +5,7 @@
 import struct
 from enum import Enum
 
-MEMORY_SIZE = 8196
+MEMORY_SIZE = 65536
 CompileController = None
 
 

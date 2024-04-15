@@ -282,10 +282,12 @@ def new_lvar(name, ty):
     return var
 
 
-def new_gvar(name, ty, emit):
+def new_gvar(name, ty, emit, val=None):
     global globals
 
     var = new_var(name, ty, False)
+    if val is not None:
+        var.val = val
     sc = push_scope(name)
     sc.var = var
 
@@ -317,33 +319,36 @@ def new_unary(kind, lhs, tok=tokenize.token):
     return Node(kind, 0, lhs, tok=tok)
 
 
-def new_num():
-    if tokenize.token.kind != tokenize.TokenKind.TK_NUM:
-        if tokenize.token.kind == tokenize.TokenKind.TK_RESERVED:
-            if tokenize.token.str == "true":
-                node = Node(NodeKind.ND_NUM, val=1, tok=tokenize.token)
+def new_num(val=None, tok=tokenize.token):
+    if val is None:
+        if tokenize.token.kind != tokenize.TokenKind.TK_NUM:
+            if tokenize.token.kind == tokenize.TokenKind.TK_RESERVED:
+                if tokenize.token.str == "true":
+                    node = Node(NodeKind.ND_NUM, val=1, tok=tokenize.token)
+                    tokenize.token = tokenize.token.next
+                    return node
+                if tokenize.token.str == "false":
+                    node = Node(NodeKind.ND_NUM, val=0, tok=tokenize.token)
+                    tokenize.token = tokenize.token.next
+                    return node
+            raise RuntimeError("Error: expected a number, but got %s" % tokenize.token.str)
+        if {'e', 'E', '.', 'f', "F"} & set(str(tokenize.token.str)):
+            if 'f' in tokenize.token.str or 'F' in tokenize.token.str:
+                node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str[:-1]), tok=tokenize.token)
+                node.ty = type.float_type
                 tokenize.token = tokenize.token.next
                 return node
-            if tokenize.token.str == "false":
-                node = Node(NodeKind.ND_NUM, val=0, tok=tokenize.token)
+            else:
+                node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str), tok=tokenize.token)
+                node.ty = type.double_type
                 tokenize.token = tokenize.token.next
                 return node
-        raise RuntimeError("Error: expected a number, but got %s" % tokenize.token.str)
-    if {'e', 'E', '.', 'f', "F"} & set(str(tokenize.token.str)):
-        if 'f' in tokenize.token.str or 'F' in tokenize.token.str:
-            node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str[:-1]), tok=tokenize.token)
-            node.ty = type.float_type
-            tokenize.token = tokenize.token.next
-            return node
         else:
-            node = Node(NodeKind.ND_NUM, val=float(tokenize.token.str), tok=tokenize.token)
-            node.ty = type.double_type
+            node = Node(NodeKind.ND_NUM, val=int(tokenize.token.str), tok=tokenize.token)
             tokenize.token = tokenize.token.next
             return node
     else:
-        node = Node(NodeKind.ND_NUM, val=int(tokenize.token.str), tok=tokenize.token)
-        tokenize.token = tokenize.token.next
-        return node
+        return Node(NodeKind.ND_NUM, val=val)
 
 
 def new_var_node(var, tok=tokenize.token):
@@ -384,7 +389,7 @@ def type_suffix(base):
     ty = type.array_of(ty, sz)
     ty.is_incomplete = is_incomplete
 
-    return type.array_of(base, sz)
+    return ty
 
 
 def push_tag_scope(tok, ty):
@@ -400,7 +405,6 @@ def push_tag_scope(tok, ty):
 # struct-decl = "struct" ident? ("{" struct-member "}")?
 def struct_decl():
     tag = tokenize.consume_ident()
-
 
     if tag is not None and not tokenize.peek("{"):
         sc = find_tag(tag)
@@ -626,7 +630,9 @@ def global_var():
 
     if tokenize.peek('='):
         tokenize.consume('=')
-        new_gvar(name, ty, True)
+        val = tokenize.expect_number()
+        new_gvar(name, ty, True, val=val)
+        tokenize.expect(';')
         return
 
     tokenize.expect(';')
@@ -793,8 +799,6 @@ def is_typename():
             or tokenize.peek("bool")
             or tokenize.peek("enum")
             or tokenize.peek("union")
-            or tokenize.peek("float")
-            or tokenize.peek("double")
             or find_typedef(tokenize.token))
 
 
