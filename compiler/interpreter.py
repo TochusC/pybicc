@@ -16,6 +16,49 @@ class AddressingMode(Enum):
     MEMORY = 2
 
 
+# 确定寻址模式
+def addressing(source):
+    """
+    根据源操作数（source）的形式，确认源操作数的寻址模式
+    :param source: 需要确定寻址模式的源操作数
+    :return AddressingMode:  枚举类型的寻址模式
+    """
+    # 寄存器寻址模式
+    if source in Register_Table:
+        return AddressingMode.REGISTER
+
+    # 内存寻址模式
+    elif "[" in source and "]" in source:
+        return AddressingMode.MEMORY
+
+    # 立即数寻址模式
+    else:
+        return AddressingMode.IMMEDIATE
+
+# 根据寻址模式获取操作数的值
+def getValueByAddressing(AddressingMode, source):
+    """
+    根据寻址模式获取操作数的值
+    :param AddressingMode: 寻址模式
+    :param source: 源操作数
+    :return value: 源操作数的值
+    """
+    if AddressingMode == AddressingMode.IMMEDIATE:
+        try:
+            return int(source)
+        except ValueError:
+           return source
+
+    elif AddressingMode == AddressingMode.REGISTER:
+        return Register_Table[source].get()
+
+    elif AddressingMode == AddressingMode.MEMORY:
+        raise RuntimeError("在不确定大小的情况下无法获取内存值")
+    else:
+        raise RuntimeError("无法识别的源操作数: %s" % source)
+
+
+
 MAX_64BIT_INT = 0x7FFFFFFFFFFFFFFF
 
 
@@ -135,32 +178,12 @@ class MemoryClass:
             value += self.storage[pos + i] << (i * 8)
         return value
 
-
 Memory = MemoryClass()
 
 output = ''
 
 function_entry_index_table = {}
 
-
-# 确定寻址模式
-def addressing(source):
-    """
-    根据源操作数（source）的形式，确认源操作数的寻址模式
-    :param source: 需要确定寻址模式的源操作数
-    :return AddressingMode:  枚举类型的寻址模式
-    """
-    # 寄存器寻址模式
-    if source in Register_Table:
-        return AddressingMode.REGISTER
-
-    # 内存寻址模式
-    elif "[" in source and "]" in source:
-        return AddressingMode.MEMORY
-
-    # 立即数寻址模式
-    else:
-        return AddressingMode.IMMEDIATE
 
 
 def getMemoryAddress(src):
@@ -324,27 +347,7 @@ def ieee754_to_double(ieee754_hex):
     return value
 
 
-# 根据寻址模式获取操作数的值
-def getValueByAddressing(AddressingMode, source):
-    """
-    根据寻址模式获取操作数的值
-    :param AddressingMode: 寻址模式
-    :param source: 源操作数
-    :return value: 源操作数的值
-    """
-    if AddressingMode == AddressingMode.IMMEDIATE:
-        try:
-            return int(source)
-        except ValueError:
-           return source
 
-    elif AddressingMode == AddressingMode.REGISTER:
-        return Register_Table[source].get()
-
-    elif AddressingMode == AddressingMode.MEMORY:
-        raise RuntimeError("在不确定大小的情况下无法获取内存值")
-    else:
-        raise RuntimeError("无法识别的源操作数: %s" % source)
 
 
 RUNNING_COMMAND_LINE_INDEX = 0
@@ -377,6 +380,12 @@ current_var = Vars('', 0)
 
 
 def enterDataSegment(command_line_index, assembly_commands):
+    """
+    进入数据段，处理数据段的数据
+    :param command_line_index:
+    :param assembly_commands:
+    :return:
+    """
     global current_var, glb_vars_size, glb_vars
 
     while command_line_index < len(assembly_commands):
@@ -432,7 +441,7 @@ def run(code):
     while command_line_index < len(assembly_commands):
         command_line = assembly_commands[command_line_index]  # 获取当前行的汇编代码
 
-        command_line_index += 1  # 执行完一行代码后，指针指向下一行, 类似与PC寄存器 # TODO 改为使用PC寄存器进行模拟
+        command_line_index += 1  # 执行完一行代码后，指针指向下一行, 类似与PC寄存器
 
         if command_line == "":
             continue
@@ -475,13 +484,17 @@ def run(code):
 
 
 def run_command(command):
-    global output
-    global register
+    """
+    运行指令
+    :param command:
+    :return:
+    """
+    global output, register
     global CURRENT_FUNC, RUNNING_COMMAND_LINE_INDEX, PREV_FUNC
     # print("RUNNING INDEX: %d" % RUNNING_COMMAND_LINE_INDEX, "COMMAND: ", command) # DEBUG USE
 
     segment = command.split(" ")  # 将每行汇编代码按空格分割
-    # push指令:将数据压入栈中 通用形式：push source
+    # push指令:将数据压入栈中 通用形式：push ( source | offset source )
     if segment[0] == "push":
         if len(segment) == 2:
             source = segment[1]
@@ -598,7 +611,7 @@ def run_command(command):
         else:
             raise RuntimeError("imul指令的参数量错误，共有%d个参数" % len(segment))
 
-    # 整数除法指令idiv 通用形式：div operand
+    # 整数除法指令idiv 通用形式：idiv operand
     # idiv指令实现的有些粗糙，可能出现问题
     elif segment[0] == "idiv":
         if len(segment) == 2:
@@ -740,6 +753,7 @@ def run_command(command):
             raise RuntimeError("setle指令的参数量错误，共有%d个参数" % len(segment))
 
     # movzb指令，用于将一个字节（8位）的无符号整数值零扩展并移动到指定寄存器。
+    # movzb destination, source
     # "move zero-extend byte"。
     elif segment[0] == "movzb":
         if len(segment) == 3:
@@ -763,6 +777,7 @@ def run_command(command):
             raise RuntimeError("movzb指令的参数量错误，共有%d个参数" % len(segment))
 
     # movsx指令，用于将一个字节（8位）的有符号整数值符号扩展并移动到指定寄存器。
+    # movsx destination, source
     elif segment[0] == "movsx":
         if len(segment) == 5:
 
@@ -786,6 +801,7 @@ def run_command(command):
         else:
             raise RuntimeError("movsb指令的参数量错误，共有%d个参数" % len(segment))
     # movss指令，用于将一个双字（32位）的单精度浮点数值移动到指定寄存器。
+    # movss destination, source
     elif segment[0] == "movss":
         if len(segment) == 3:
             destination = segment[1][:-1]

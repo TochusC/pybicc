@@ -643,7 +643,7 @@ def is_function():
     return isfunc
 
 
-# program = (typedef | global-var | function | struct)*
+# program = (typedef | global-var | function)*
 def program():
     global globals
     head = Function()
@@ -654,14 +654,7 @@ def program():
         if tokenize.at_eof():
             break
         if tokenize.consume('typedef'):
-            ty = basetype()
-            ty = type_suffix(ty)
-            name = tokenize.expect_ident()
-
-            push_scope(name)
-            var_scope.typedef = ty
-
-            tokenize.expect(';')
+            typedef()
 
         if is_function():
             fn = function()
@@ -676,6 +669,17 @@ def program():
     prog.fns = head.next
 
     return prog
+
+# typdef basetype ident ";"
+def typedef():
+    ty = basetype()
+    ty = type_suffix(ty)
+    name = tokenize.expect_ident()
+
+    push_scope(name)
+    var_scope.typedef = ty
+
+    tokenize.expect(';')
 
 
 # basetype = builtin-type | struct-decl | typedef-name | enum-specifier  "*"*
@@ -717,7 +721,7 @@ def basetype():
     return ty
 
 
-# function = static? basetype declarator "(" params? ")" ("{" stmt* "}" | ";")
+# function = static? basetype declaration "(" params? ")" ("{" stmt* "}" | ";")
 # params   = param ("," param)*
 # param    = basetype ident
 def function():
@@ -1197,7 +1201,6 @@ def func_args():
 #         | ident func-args?
 #         | str
 #         | num
-# args = "(" ident ("," ident)* ")"
 def primary():
     if tokenize.consume("("):
         node = expr()
