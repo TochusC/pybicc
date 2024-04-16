@@ -1110,9 +1110,9 @@ def run_command(command):
                             elif 'd' in userInput:
                                 Memory.insert(addr, float(userInput), 8)
                             elif userInput[0] == '0':
-                                Memory.insert(addr, int(userInput, 8), 8)
+                                Memory.insert(addr, int(userInput[1:], 8), 8)
                             elif userInput[0] == 'b':
-                                Memory.insert(addr, int(userInput, 2), 8)
+                                Memory.insert(addr, int(userInput[1:], 2), 8)
                             else:
                                 Memory.insert(addr, int(userInput), 8)
                         except ValueError:

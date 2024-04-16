@@ -84,7 +84,7 @@ class NodeKind(Enum):
     ND_CASE = 47  # case
     ND_BREAK = 48  # break
     ND_CONTINUE = 49  # continue
-    ND_GOTO = 50  # goto
+    ND_GOTO = 50  # goto.c
     ND_LABEL = 51  # label
 
     ND_SHR = 52  # >>
@@ -819,7 +819,7 @@ def stmt():
 #      | "typedef" basetype ident ("[" num "]")* ";"
 #      | "break" ";"
 #      | "continue" ";"
-#      | "goto" ident ";"
+#      | "goto.c" ident ";"
 #      | ident ":" stmt
 #      | declaration
 #      | expr ";"
@@ -939,7 +939,7 @@ def stmt2():
         tokenize.expect(";")
         return new_node(NodeKind.ND_CONTINUE)
 
-    if tokenize.consume("goto"):
+    if tokenize.consume("goto.c"):
         node = new_node(NodeKind.ND_GOTO)
         node.label_name = tokenize.expect_ident()
         tokenize.expect(";")

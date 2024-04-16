@@ -15,7 +15,7 @@ def ispunct(c):
 
 keywords = ["return", "if", "else", "while", "for",
             "int", "short", "long", "void", "char", "bool",
-            "sizeof", "struct", "typedef", "static",
+            "struct", "typedef", "static",
             "break", "continue", "switch", "case", "default",
             "goto",  "true", "false", "enum",
             ]

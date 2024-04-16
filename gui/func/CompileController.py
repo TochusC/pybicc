@@ -52,9 +52,9 @@ class CompileController:
             elif 'd' in userInput:
                 returnValue = float(userInput)
             elif userInput[0] == '0':
-                returnValue = int(userInput, 8)
+                returnValue = int(userInput[1:], 8)
             elif userInput[0] == 'b':
-                returnValue = int(userInput, 2)
+                returnValue = int(userInput[1:], 2)
             else:
                 returnValue = int(userInput)
         except Exception as e:

@@ -1,10 +1,10 @@
 enum{
     zero,
     one,
-    tow,
+    two,
 }C;
 
 int main(){
-    C = one;
+    C = two;
     return C;
 }

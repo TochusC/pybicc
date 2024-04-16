@@ -37,11 +37,6 @@ from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
 
-int a;
-
-int main(){
-    return a;
-}
 """
 
 DEBUG = True
