@@ -37,17 +37,12 @@ class TokenKind(Enum):
 
 
 class Token:
-    kind = TokenKind  # Token kind 标记种类
-    str = ""  # Token string Token字符串
-    next = None  # Next token 下一个token
-
-    contents = None
-    cont_len = None
-
     def __init__(self, kind, str, next):
         self.kind = kind
         self.str = str
         self.next = next
+        self.contents = None
+        self.cont_len = None
 
 
 # Consumes the current token if it matches `op`.

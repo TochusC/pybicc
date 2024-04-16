@@ -140,57 +140,63 @@ Pybicc项目由三大部分组成:
    其依据汇编语言，逐行解释执行指令，模拟相关操作。
 
    解释器以字节级别模拟实现了对存储器的访问存取，每个单元存储一个字节的数据，并实现了ALU的相应计算功能。
-   - 寄存器（Register） 寄存器使用类进行模拟，所有寄存器（如rax,rbp,rsp）均为Register类的实例，访问存取通过成员函数提供的接口实现，所有实例共享shared_storage（存储空间）变量。
-     由此实现多个不同大小寄存器（rax,eax,ax,al）使用同一存储区域的特性。
-     <img src="docs/static/img/register.png" style="width: 420px">
-   - 内存（Memory） 内存使用Memory类进行模拟，访问存取通过成员函数提供的接口实现。
-     <img src="docs/static/img/memory.png" style="width: 420px">
-   - 模拟支持的指令
-      - push ( source | offset source )
-      - pop destination
-      - add destination, source
-      - sub destination, source
-      - imul destination, source
-      - idiv operand
-      - cqo
-      - cmp operand1 operand2
-      - sete destination
-      - setne destination
-      - setl destination
-      - setle destination
-      - mov destination, source
-      - movzb destination, source
-      - movsx destination, source
-      - movss destination, source
-      - movsd destination, source
-      - lea destination, source
-      - and destination, source
-      - or destination, source
-      - not destination
-      - xor destination, source
-      - shl destination, source
-      - shr destination, source
-      - sal destination, source
-      - sar destination, source
-      - jnz label
-      - je label
-      - jne label
-      - call label
-      - ret
-   - 在模拟指令运行时，解释器会将指令操作数送至`addresing`函数获取操作数的寻址方式，然后根据寻址方式
-     使用`Memory.get(pos,size)`从内存获取操作数的值，或使用`getValueByAddressing`获取操作数的值。
-     <img src="docs/static/img/adressing.png" style="width: 420px">
-   - 在内存寻址时，通过`getMomoryAddress(expr)`获得内存地址，`getMomoryAddress(expr)`会根据表达式，转换为前缀表达式形式，计算出表达式的值，然后根据值计算出内存地址。
-     <img src="docs/static/img/getMemoryAddress.png" style="width: 420px">
-   - 解释器在模拟运行之前会先解析一边汇编代码，处理数据段，文本段的相关内容，并将代码段中的所有函数相关信息（入口、标识符）记录至全局变量`glb_func`中。
-     <img src="docs/static/img/parseAsm.png" style="width: 420px">
+   
+   解释器由若干重要的全局变量
+   1. glb_vars - 记录程序运行中的全局变量
+   2. glb_funcs - 记录所有全局可见函数
+   3. CURRENT_FUNC - 当前运行的函数名
+   4. RUNNING_COMMAND_LINE_INDEX - 当前运行的指令行号
+   - 解释器在模拟运行之前会先解析一遍汇编代码，处理数据段，文本段的相关内容，并将代码段中的所有函数相关信息（入口、标识符）记录至全局变量`glb_func`中。
+    <img src="docs/static/img/parseAsm.png" style="width: 420px">
    - `enterDataSegment`函数用于处理数据段，将数据段中的数据存储至内存中。
-     <img src="docs/static/img/enterDataSegment.png" style="width: 420px">
+    <img src="docs/static/img/enterDataSegment.png" style="width: 420px">
    - 解释器再解析完汇编代码后，会从`glb_func`中找到main函数的入口，并通过把全局变量`RUNNING_COMMAND_LINE_INDEX`
-     设置main函数的入口开始模拟执行汇编代码。
-     <img src="docs/static/img/runAsm.png" style="width: 420px">
+    设置main函数的入口开始模拟执行汇编代码。
+    <img src="docs/static/img/runAsm.png" style="width: 420px">
    - `run_command()`函数用于模拟执行汇编代码，根据指令的操作码，调用相应的函数模拟执行指令。
-     <img src="docs/static/img/run-command.png" style="width: 420px">
+    <img src="docs/static/img/run-command.png" style="width: 420px">
+   - 寄存器（Register） 寄存器使用类进行模拟，所有寄存器（如rax,rbp,rsp）均为Register类的实例，访问存取通过成员函数提供的接口实现，所有实例共享shared_storage（存储空间）变量。
+    由此实现多个不同大小寄存器（rax,eax,ax,al）使用同一存储区域的特性。
+    <img src="docs/static/img/register.png" style="width: 420px">
+   - 内存（Memory） 内存使用Memory类进行模拟，访问存取通过成员函数提供的接口实现。
+    <img src="docs/static/img/memory.png" style="width: 420px">
+   - 模拟支持的指令
+     - push ( source | offset source )
+     - pop destination
+     - add destination, source
+     - sub destination, source
+     - imul destination, source
+     - idiv operand
+     - cqo
+     - cmp operand1 operand2
+     - sete destination
+     - setne destination
+     - setl destination
+     - setle destination
+     - mov destination, source
+     - movzb destination, source
+     - movsx destination, source
+     - movss destination, source
+     - movsd destination, source
+     - lea destination, source
+     - and destination, source
+     - or destination, source
+     - not destination
+     - xor destination, source
+     - shl destination, source
+     - shr destination, source
+     - sal destination, source
+     - sar destination, source
+     - jnz label
+     - je label
+     - jne label
+     - call label
+     - ret
+   - 在模拟指令运行时，解释器会将指令操作数送至`addresing`函数获取操作数的寻址方式，然后根据寻址方式
+    使用`Memory.get(pos,size)`从内存获取操作数的值，或使用`getValueByAddressing`获取操作数的值。
+    <img src="docs/static/img/adressing.png" style="width: 420px">
+   - 在内存寻址时，通过`getMomoryAddress(expr)`获得内存地址，`getMomoryAddress(expr)`会根据表达式，转换为前缀表达式形式，计算出表达式的值，然后根据值计算出内存地址。
+    <img src="docs/static/img/getMemoryAddress.png" style="width: 420px">
 3. 图形化界面(GUI)
     图形化界面采用Fluent 2设计风格，使用[PyQt6](https://riverbankcomputing.com/software/pyqt/intro)及[PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets)实现，并提供了部分集成开发环境（IDE）的功能。
     <img src="docs/static/img/fluent.png" style="width: 420px">
