@@ -9,7 +9,7 @@
 
 
 
-[![version](https://img.shields.io/badge/Version-0.2.9u-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
+[![version](https://img.shields.io/badge/Version-0.3.1-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
 [![course](https://img.shields.io/badge/UPC-CompilerDesign-blue)](https://github.com/TochusC/ai-assistant-teaching-website)
 
 [![madewithlove](https://img.shields.io/badge/made_with-%E2%9D%A4-red?style=for-the-badge&labelColor=orange)](https://github.com/TochusC/ai-assistant-teaching-website)
@@ -222,6 +222,7 @@ Pybicc项目由三大部分组成:
 
     图形化界面主要分为四大视图：总览视图，词法分析视图，语法分析视图，文件视图。
     - 总览视图：显示总体功能，左上边框显示C源代码，右上边框显示编译后的汇编代码，下边框显示解释执行的结果。
+      
       <img src="docs/static/img/overview.png" style="width: 420px">
     - 词法分析视图：显示词法分析的结果，左边框显示源代码，右边框显示词法分析的结果。
       
@@ -239,9 +240,10 @@ Pybicc项目由三大部分组成:
     - 代码编辑器：支持代码高亮，代码折叠，代码提示，代码补全等功能。
     - 汇编语言编辑器：支持汇编语言的编辑，高亮，折叠，提示等功能。
     - 词法分析结果高亮，语法分析结果高亮。
-    图形化界面的开发引入了**生命周期**的概念，通过生命周期管理，实现了界面刷新，数据更新等功能。
    
-   <img src="docs/static/img/life-cycle.png" style="width: 420px">
+    图形化界面的开发引入了**生命周期**的概念，通过生命周期管理，实现了界面刷新，数据更新等功能。
+    
+      <img src="docs/static/img/life-cycle.png" style="width: 420px">
 
 ## 如何运行此项目❓
 
