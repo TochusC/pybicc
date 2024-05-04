@@ -36,7 +36,15 @@
 from compiler import tokenize, parse, codegen, interpreter, utils
 
 codeToCompile = """
-
+ int foo(int *x, int y)
+    {
+        return *x + y;
+    }
+     int main() {
+        int x=3;
+        int y=5;
+        return foo(&x, y);
+    }
 """
 
 DEBUG = True
