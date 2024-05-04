@@ -77,15 +77,18 @@
 Pybicc项目由三大部分组成:
 1. 编译器(tokenize.py、parse.py、codegen.py)
     
-    - tokenize.py 
-    - 负责词法分析，解析C源代码，生成Token链表。
+    - tokenize.py
+      
+      负责词法分析，解析C源代码，生成Token链表。
    
       以下是支持的关键字，运算符：
 
       <img src="docs/static/img/tokenize.png" style="width: 420px">
 
-    - parse.py 
+    - parse.py
+      
       使用**LL(1)文法分析**，根据语法分析生成的Token链表，建立抽象语法树（AST）。
+      
       语法生成规则：
       ```
       - program    = (typedef | global-var | function )*
@@ -132,18 +135,21 @@ Pybicc项目由三大部分组成:
                    | str             
                    | num             
       ```
-    - codegen.py根据语法分析生成的抽象语法树，进行语义分析，翻译为Intel80x86汇编语言
+    - codegen.py
+      
+      根据语法分析生成的抽象语法树，进行语义分析，翻译为Intel80x86汇编语言
    
       <img src="docs/static/img/parse.png" style="width: 420px">
    
 2. 解释器(interpreter.py)
+   
    为了在图形化界面（GUI）中得到运行结果，我们还额外编写了用于解释执行Intel80x86汇编语言的解释器，
    
    其依据汇编语言，逐行解释执行指令，模拟相关操作。
 
    解释器以字节级别模拟实现了对存储器的访问存取，每个单元存储一个字节的数据，并实现了ALU的相应计算功能。
    
-   解释器由若干重要的全局变量
+   解释器有着若干重要的全局变量：
    1. glb_vars - 记录程序运行中的全局变量
    2. glb_funcs - 记录所有全局可见函数
    3. CURRENT_FUNC - 当前运行的函数名
@@ -165,12 +171,16 @@ Pybicc项目由三大部分组成:
     
      <img src="docs/static/img/run-command.png" style="width: 420px">
      
-   - 寄存器（Register） 寄存器使用类进行模拟，所有寄存器（如rax,rbp,rsp）均为Register类的实例，访问存取通过成员函数提供的接口实现，所有实例共享shared_storage（存储空间）变量。
-    由此实现多个不同大小寄存器（rax,eax,ax,al）使用同一存储区域的特性。
+   - 寄存器（Register）
+     
+     寄存器使用类进行模拟，所有寄存器（如rax,rbp,rsp）均为Register类的实例，访问存取通过成员函数提供的接口实现，所有实例共享shared_storage（存储空间）变量。
+     由此实现多个不同大小寄存器（rax,eax,ax,al）使用同一存储区域的特性。
    
      <img src="docs/static/img/register.png" style="width: 420px">
      
-   - 内存（Memory） 内存使用Memory类进行模拟，访问存取通过成员函数提供的接口实现。
+   - 内存（Memory）
+
+     内存使用Memory类进行模拟，访问存取通过成员函数提供的接口实现。
     
      <img src="docs/static/img/memory.png" style="width: 420px">
      
@@ -215,7 +225,8 @@ Pybicc项目由三大部分组成:
     
      <img src="docs/static/img/getMemoryAddress.png" style="width: 420px">
     
-3. 图形化界面(GUI)
+4. 图形化界面(GUI)
+   
     图形化界面采用Fluent 2设计风格，使用[PyQt6](https://riverbankcomputing.com/software/pyqt/intro)及[PyQt-Fluent-Widgets](https://github.com/zhiyiYo/PyQt-Fluent-Widgets)实现，并提供了部分集成开发环境（IDE）的功能。
     
     <img src="docs/static/img/fluent.png" style="width: 420px">
@@ -243,7 +254,7 @@ Pybicc项目由三大部分组成:
    
     图形化界面的开发引入了**生命周期**的概念，通过生命周期管理，实现了界面刷新，数据更新等功能。
     
-      <img src="docs/static/img/life-cycle.png" style="width: 420px">
+    <img src="docs/static/img/life-cycle.png" style="width: 420px">
 
 ## 如何运行此项目❓
 
